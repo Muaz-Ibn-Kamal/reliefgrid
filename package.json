@@ -1,0 +1,59 @@
+{
+  "name": "reliefgrid",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "tsx --env-file=.env --env-file-if-exists=.env.test --test tests/*.test.ts",
+    "test:migrate": "node --env-file-if-exists=.env.test node_modules/prisma/build/index.js migrate deploy",
+    "db:migrate": "prisma migrate deploy",
+    "db:generate": "prisma generate",
+    "db:seed": "tsx --env-file=.env prisma/seed.ts",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^6.19.3",
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "jose": "^6.2.18",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.77.0",
+    "next": "16.4.6",
+    "pg": "^8.23.1",
+    "prisma": "^6.19.3",
+    "qrcode": "^1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-leaflet": "^5.0.0",
+    "recharts": "^3.11.0",
+    "server-only": "^0.0.1",
+    "swr": "^2.5.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx --env-file=.env prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

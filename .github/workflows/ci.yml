@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck · lint · integration tests · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: reliefgrid
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure environment (CI-only values)
+        run: |
+          printf 'DATABASE_URL="postgresql://postgres:postgres@localhost:5432/reliefgrid"\nAUTH_SECRET="ci-only-secret-never-used-in-production-0123"\n' > .env
+          printf 'DATABASE_URL="postgresql://postgres:postgres@localhost:5432/reliefgrid_test"\n' > .env.test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Integration tests (business rules, separate database)
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE reliefgrid_test"
+          npm run test:migrate
+          npm test
+
+      - name: Migrate and seed demo database
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
+      - name: Production build
+        run: npm run build

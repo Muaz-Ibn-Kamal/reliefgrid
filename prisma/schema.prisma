@@ -1,0 +1,456 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  engineType = "client"
+  runtime  = "nodejs"
+  moduleFormat = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SYSTEM_ADMIN
+  EMERGENCY_COORDINATOR
+  RELIEF_ORGANIZATION
+  VOLUNTEER
+  SHELTER_MANAGER
+}
+
+enum IncidentCategory {
+  FLOOD
+  CYCLONE
+  EARTHQUAKE
+  FIRE
+  LANDSLIDE
+  INFRASTRUCTURE_FAILURE
+}
+
+enum IncidentStatus {
+  REPORTED
+  VERIFIED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RequestType {
+  FOOD
+  WATER
+  MEDICAL
+  SHELTER
+  RESCUE
+  TRANSPORT
+}
+
+enum RequestStatus {
+  PENDING
+  VERIFIED
+  ASSIGNED
+  COMPLETED
+  REJECTED
+}
+
+enum ResourceCategory {
+  FOOD
+  WATER
+  MEDICAL
+  EMERGENCY_KIT
+  BLANKET
+  RESCUE_EQUIPMENT
+  TRANSPORT
+}
+
+enum MovementType {
+  REGISTER
+  RESTOCK
+  ALLOCATE
+  RELEASE
+  ADJUST
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+enum AllocationStatus {
+  ALLOCATED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum ShelterStatus {
+  OPEN
+  FULL
+  CLOSED
+}
+
+enum Availability {
+  AVAILABLE
+  DEPLOYED
+  UNAVAILABLE
+}
+
+enum TaskStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  type      String
+  region    String
+  contact   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users     User[]
+  resources Resource[]
+  shelters  Shelter[]
+  teams     Team[]
+  requests  EmergencyRequest[]
+  allocations Allocation[]
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  phone          String?
+  passwordHash   String
+  role           Role
+  active         Boolean  @default(true)
+  organizationId String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  volunteer    Volunteer?
+  managedShelters Shelter[]
+  coordinatedIncidents Incident[] @relation("IncidentCoordinator")
+  reportedIncidents    Incident[] @relation("IncidentReporter")
+  notifications Notification[]
+  uploads      Upload[]
+  activity     ActivityLog[]
+
+  @@index([role])
+  @@index([organizationId])
+}
+
+model Incident {
+  id                 String           @id @default(cuid())
+  title              String
+  description        String
+  category           IncidentCategory
+  location           String
+  latitude           Float
+  longitude          Float
+  severity           Int              // 1 (minor) .. 5 (catastrophic)
+  locationRisk       Int              @default(3) // 1..5
+  affectedPopulation Int
+  status             IncidentStatus   @default(REPORTED)
+  priorityScore      Float            @default(0)
+  priorityLevel      PriorityLevel    @default(LOW)
+  priorityOverride   PriorityLevel?
+  imageUrl           String?
+  coordinatorId      String?
+  reportedById       String?
+  reportedAt         DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  resolvedAt         DateTime?
+  firstResponseAt    DateTime?
+
+  coordinator User? @relation("IncidentCoordinator", fields: [coordinatorId], references: [id])
+  reportedBy  User? @relation("IncidentReporter", fields: [reportedById], references: [id])
+  requests    EmergencyRequest[]
+  tasks       Task[]
+  teams       Team[]
+
+  @@index([status, priorityScore(sort: Desc)])
+  @@index([category])
+  @@index([reportedAt])
+  @@index([coordinatorId])
+}
+
+model EmergencyRequest {
+  id              String        @id @default(cuid())
+  incidentId      String?
+  organizationId  String?       // submitting organization (if any)
+  type            RequestType
+  quantity        Int
+  unit            String        @default("units")
+  location        String
+  latitude        Float
+  longitude       Float
+  urgency         Int           // 1..5
+  affectedPeople  Int
+  description     String
+  requesterName   String
+  requesterContact String?
+  status          RequestStatus @default(PENDING)
+  priorityScore   Float         @default(0)
+  priorityLevel   PriorityLevel @default(LOW)
+  dedupeKey       String
+  verifiedById    String?
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  completedAt     DateTime?
+  firstResponseAt DateTime?
+
+  incident     Incident?      @relation(fields: [incidentId], references: [id])
+  organization Organization?  @relation(fields: [organizationId], references: [id])
+  allocations  Allocation[]
+  tasks        Task[]
+
+  @@index([status, priorityScore(sort: Desc)])
+  @@index([type])
+  @@index([incidentId])
+  @@index([dedupeKey])
+  @@index([createdAt])
+}
+
+model Resource {
+  id              String           @id @default(cuid())
+  organizationId  String
+  name            String
+  category        ResourceCategory
+  unit            String
+  quantity        Int              // available (unallocated) stock; guarded >= 0 by CHECK constraint
+  totalReceived   Int              @default(0)
+  storageLocation String
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id])
+  movements    StockMovement[]
+  allocations  Allocation[]
+
+  @@index([organizationId, category])
+  @@index([category, quantity])
+}
+
+model StockMovement {
+  id           String       @id @default(cuid())
+  resourceId   String
+  type         MovementType
+  delta        Int
+  balanceAfter Int
+  reason       String?
+  fromLocation String?
+  toLocation   String?
+  allocationId String?
+  userId       String?
+  createdAt    DateTime     @default(now())
+
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  @@index([resourceId, createdAt])
+}
+
+model Allocation {
+  id             String           @id @default(cuid())
+  requestId      String
+  resourceId     String
+  organizationId String           // responsible organization (owner of the resource)
+  quantity       Int
+  status         AllocationStatus @default(ALLOCATED)
+  qrToken        String           @unique @default(cuid())
+  allocatedById  String
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  request       EmergencyRequest @relation(fields: [requestId], references: [id])
+  resource      Resource         @relation(fields: [resourceId], references: [id])
+  organization  Organization     @relation(fields: [organizationId], references: [id])
+  distributions DistributionRecord[]
+
+  @@index([requestId])
+  @@index([resourceId])
+  @@index([organizationId, status])
+}
+
+// Immutable ledger of distribution updates. Never updated or deleted.
+model DistributionRecord {
+  id           String           @id @default(cuid())
+  allocationId String
+  status       AllocationStatus
+  deliveredQty Int              @default(0)
+  notes        String?
+  submittedById String
+  createdAt    DateTime         @default(now())
+
+  allocation Allocation @relation(fields: [allocationId], references: [id])
+
+  @@index([allocationId, createdAt])
+}
+
+model Shelter {
+  id            String        @id @default(cuid())
+  name          String
+  location      String
+  latitude      Float
+  longitude     Float
+  totalCapacity Int
+  occupancy     Int           @default(0) // available capacity = totalCapacity - occupancy (derived)
+  facilities    String[]
+  status        ShelterStatus @default(OPEN)
+  managerId     String?
+  organizationId String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  manager      User?         @relation(fields: [managerId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  occupancyLogs ShelterOccupancyLog[]
+
+  @@index([status])
+  @@index([managerId])
+}
+
+model ShelterOccupancyLog {
+  id          String   @id @default(cuid())
+  shelterId   String
+  previous    Int
+  current     Int
+  capacity    Int
+  note        String?
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  shelter Shelter @relation(fields: [shelterId], references: [id])
+
+  @@index([shelterId, createdAt])
+}
+
+model Volunteer {
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  skills         String[]     @default([])
+  availability   Availability @default(AVAILABLE)
+  latitude       Float?
+  longitude      Float?
+  teamId         String?
+  createdAt      DateTime     @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  team  Team? @relation(fields: [teamId], references: [id])
+  tasks Task[]
+  reports FieldReport[]
+
+  @@index([availability])
+  @@index([teamId])
+}
+
+model Team {
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String?
+  incidentId     String?  // current deployment
+  status         String   @default("STANDBY") // STANDBY | DEPLOYED
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  incident     Incident?     @relation(fields: [incidentId], references: [id])
+  members      Volunteer[]
+  tasks        Task[]
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  location    String
+  latitude    Float
+  longitude   Float
+  status      TaskStatus @default(ASSIGNED)
+  incidentId  String?
+  requestId   String?
+  teamId      String?
+  volunteerId String?
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  completedAt DateTime?
+
+  incident  Incident?         @relation(fields: [incidentId], references: [id])
+  request   EmergencyRequest? @relation(fields: [requestId], references: [id])
+  team      Team?             @relation(fields: [teamId], references: [id])
+  volunteer Volunteer?        @relation(fields: [volunteerId], references: [id])
+  reports   FieldReport[]
+
+  @@index([volunteerId, status])
+  @@index([incidentId])
+}
+
+model FieldReport {
+  id          String   @id @default(cuid())
+  taskId      String
+  volunteerId String
+  content     String
+  photoUrl    String?
+  createdAt   DateTime @default(now())
+
+  task      Task      @relation(fields: [taskId], references: [id])
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id])
+
+  @@index([taskId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, read, createdAt])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+/// Uploaded images (incident photos, field photographs). Stored in Postgres so they survive serverless deploys
+/// and are only served to signed-in users via /api/uploads/:id. Size-capped at 5 MB by the upload route and a CHECK.
+model Upload {
+  id           String   @id @default(cuid())
+  contentType  String
+  size         Int
+  data         Bytes
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id])
+}
