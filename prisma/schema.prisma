@@ -1,11 +1,11 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
-  engineType = "client"
-  runtime  = "nodejs"
-  moduleFormat = "esm"
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  engineType             = "client"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
   generatedFileExtension = "ts"
-  importFileExtension = ""
+  importFileExtension    = ""
 }
 
 datasource db {
@@ -108,6 +108,7 @@ enum TaskStatus {
   CANCELLED
 }
 
+/// Relief organization. The unit of multi-organization isolation: stock, allocations and teams belong to one.
 model Organization {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -117,14 +118,15 @@ model Organization {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  users     User[]
-  resources Resource[]
-  shelters  Shelter[]
-  teams     Team[]
-  requests  EmergencyRequest[]
+  users       User[]
+  resources   Resource[]
+  shelters    Shelter[]
+  teams       Team[]
+  requests    EmergencyRequest[]
   allocations Allocation[]
 }
 
+/// Account with exactly one role. Relief-organization users are bound to an organization; inactive users cannot sign in.
 model User {
   id             String   @id @default(cuid())
   email          String   @unique
@@ -136,19 +138,20 @@ model User {
   organizationId String?
   createdAt      DateTime @default(now())
 
-  organization Organization? @relation(fields: [organizationId], references: [id])
-  volunteer    Volunteer?
-  managedShelters Shelter[]
-  coordinatedIncidents Incident[] @relation("IncidentCoordinator")
-  reportedIncidents    Incident[] @relation("IncidentReporter")
-  notifications Notification[]
-  uploads      Upload[]
-  activity     ActivityLog[]
+  organization         Organization?  @relation(fields: [organizationId], references: [id])
+  volunteer            Volunteer?
+  managedShelters      Shelter[]
+  coordinatedIncidents Incident[]     @relation("IncidentCoordinator")
+  reportedIncidents    Incident[]     @relation("IncidentReporter")
+  notifications        Notification[]
+  uploads              Upload[]
+  activity             ActivityLog[]
 
   @@index([role])
   @@index([organizationId])
 }
 
+/// Disaster event with location, severity and affected population. Priority is calculated (and can be overridden) and every change is audited.
 model Incident {
   id                 String           @id @default(cuid())
   title              String
@@ -157,7 +160,7 @@ model Incident {
   location           String
   latitude           Float
   longitude          Float
-  severity           Int              // 1 (minor) .. 5 (catastrophic)
+  severity           Int // 1 (minor) .. 5 (catastrophic)
   locationRisk       Int              @default(3) // 1..5
   affectedPopulation Int
   status             IncidentStatus   @default(REPORTED)
@@ -172,8 +175,8 @@ model Incident {
   resolvedAt         DateTime?
   firstResponseAt    DateTime?
 
-  coordinator User? @relation("IncidentCoordinator", fields: [coordinatorId], references: [id])
-  reportedBy  User? @relation("IncidentReporter", fields: [reportedById], references: [id])
+  coordinator User?              @relation("IncidentCoordinator", fields: [coordinatorId], references: [id])
+  reportedBy  User?              @relation("IncidentReporter", fields: [reportedById], references: [id])
   requests    EmergencyRequest[]
   tasks       Task[]
   teams       Team[]
@@ -184,34 +187,35 @@ model Incident {
   @@index([coordinatorId])
 }
 
+/// Request for food, water, medical supplies, shelter, rescue or transport, optionally tied to an incident. dedupeKey supports duplicate detection.
 model EmergencyRequest {
-  id              String        @id @default(cuid())
-  incidentId      String?
-  organizationId  String?       // submitting organization (if any)
-  type            RequestType
-  quantity        Int
-  unit            String        @default("units")
-  location        String
-  latitude        Float
-  longitude       Float
-  urgency         Int           // 1..5
-  affectedPeople  Int
-  description     String
-  requesterName   String
+  id               String        @id @default(cuid())
+  incidentId       String?
+  organizationId   String? // submitting organization (if any)
+  type             RequestType
+  quantity         Int
+  unit             String        @default("units")
+  location         String
+  latitude         Float
+  longitude        Float
+  urgency          Int // 1..5
+  affectedPeople   Int
+  description      String
+  requesterName    String
   requesterContact String?
-  status          RequestStatus @default(PENDING)
-  priorityScore   Float         @default(0)
-  priorityLevel   PriorityLevel @default(LOW)
-  dedupeKey       String
-  verifiedById    String?
-  rejectionReason String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  completedAt     DateTime?
-  firstResponseAt DateTime?
+  status           RequestStatus @default(PENDING)
+  priorityScore    Float         @default(0)
+  priorityLevel    PriorityLevel @default(LOW)
+  dedupeKey        String
+  verifiedById     String?
+  rejectionReason  String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  completedAt      DateTime?
+  firstResponseAt  DateTime?
 
-  incident     Incident?      @relation(fields: [incidentId], references: [id])
-  organization Organization?  @relation(fields: [organizationId], references: [id])
+  incident     Incident?     @relation(fields: [incidentId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
   allocations  Allocation[]
   tasks        Task[]
 
@@ -222,13 +226,14 @@ model EmergencyRequest {
   @@index([createdAt])
 }
 
+/// A stock line owned by one organization. quantity is the available stock (CHECK >= 0); every change is written to StockMovement.
 model Resource {
   id              String           @id @default(cuid())
   organizationId  String
   name            String
   category        ResourceCategory
   unit            String
-  quantity        Int              // available (unallocated) stock; guarded >= 0 by CHECK constraint
+  quantity        Int // available (unallocated) stock; guarded >= 0 by CHECK constraint
   totalReceived   Int              @default(0)
   storageLocation String
   latitude        Float?
@@ -244,6 +249,7 @@ model Resource {
   @@index([category, quantity])
 }
 
+/// Append-only stock ledger: register, restock, allocate, release, adjust and transfers, with the running balance.
 model StockMovement {
   id           String       @id @default(cuid())
   resourceId   String
@@ -262,11 +268,12 @@ model StockMovement {
   @@index([resourceId, createdAt])
 }
 
+/// Links a request, a resource and the responsible organization. Created in one locked transaction that never oversells.
 model Allocation {
   id             String           @id @default(cuid())
   requestId      String
   resourceId     String
-  organizationId String           // responsible organization (owner of the resource)
+  organizationId String // responsible organization (owner of the resource)
   quantity       Int
   status         AllocationStatus @default(ALLOCATED)
   qrToken        String           @unique @default(cuid())
@@ -275,9 +282,9 @@ model Allocation {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
-  request       EmergencyRequest @relation(fields: [requestId], references: [id])
-  resource      Resource         @relation(fields: [resourceId], references: [id])
-  organization  Organization     @relation(fields: [organizationId], references: [id])
+  request       EmergencyRequest     @relation(fields: [requestId], references: [id])
+  resource      Resource             @relation(fields: [resourceId], references: [id])
+  organization  Organization         @relation(fields: [organizationId], references: [id])
   distributions DistributionRecord[]
 
   @@index([requestId])
@@ -286,82 +293,87 @@ model Allocation {
 }
 
 // Immutable ledger of distribution updates. Never updated or deleted.
+/// Distribution history of an allocation. Immutable: a database trigger rejects UPDATE and DELETE.
 model DistributionRecord {
-  id           String           @id @default(cuid())
-  allocationId String
-  status       AllocationStatus
-  deliveredQty Int              @default(0)
-  notes        String?
+  id            String           @id @default(cuid())
+  allocationId  String
+  status        AllocationStatus
+  deliveredQty  Int              @default(0)
+  notes         String?
   submittedById String
-  createdAt    DateTime         @default(now())
+  createdAt     DateTime         @default(now())
 
   allocation Allocation @relation(fields: [allocationId], references: [id])
 
   @@index([allocationId, createdAt])
 }
 
+/// Emergency shelter. CHECK keeps occupancy between 0 and totalCapacity; available capacity is derived, never stored.
 model Shelter {
-  id            String        @id @default(cuid())
-  name          String
-  location      String
-  latitude      Float
-  longitude     Float
-  totalCapacity Int
-  occupancy     Int           @default(0) // available capacity = totalCapacity - occupancy (derived)
-  facilities    String[]
-  status        ShelterStatus @default(OPEN)
-  managerId     String?
+  id             String        @id @default(cuid())
+  name           String
+  location       String
+  latitude       Float
+  longitude      Float
+  totalCapacity  Int
+  occupancy      Int           @default(0) // available capacity = totalCapacity - occupancy (derived)
+  facilities     String[]
+  status         ShelterStatus @default(OPEN)
+  managerId      String?
   organizationId String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  manager      User?         @relation(fields: [managerId], references: [id])
-  organization Organization? @relation(fields: [organizationId], references: [id])
+  manager       User?                 @relation(fields: [managerId], references: [id])
+  organization  Organization?         @relation(fields: [organizationId], references: [id])
   occupancyLogs ShelterOccupancyLog[]
 
   @@index([status])
   @@index([managerId])
 }
 
+/// Append-only occupancy history, written in the same transaction as each occupancy change.
 model ShelterOccupancyLog {
-  id          String   @id @default(cuid())
-  shelterId   String
-  previous    Int
-  current     Int
-  capacity    Int
-  note        String?
-  userId      String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  shelterId String
+  previous  Int
+  current   Int
+  capacity  Int
+  note      String?
+  userId    String?
+  createdAt DateTime @default(now())
 
   shelter Shelter @relation(fields: [shelterId], references: [id])
 
   @@index([shelterId, createdAt])
 }
 
+/// Volunteer profile (one per VOLUNTEER user): skills, availability, home location for matching, optional team.
 model Volunteer {
-  id             String       @id @default(cuid())
-  userId         String       @unique
-  skills         String[]     @default([])
-  availability   Availability @default(AVAILABLE)
-  latitude       Float?
-  longitude      Float?
-  teamId         String?
-  createdAt      DateTime     @default(now())
+  id           String       @id @default(cuid())
+  userId       String       @unique
+  skills       String[]     @default([])
+  availability Availability @default(AVAILABLE)
+  latitude     Float?
+  longitude    Float?
+  teamId       String?
+  createdAt    DateTime     @default(now())
 
-  user  User  @relation(fields: [userId], references: [id])
-  team  Team? @relation(fields: [teamId], references: [id])
-  tasks Task[]
+  user    User          @relation(fields: [userId], references: [id])
+  team    Team?         @relation(fields: [teamId], references: [id])
+  tasks   Task[]
   reports FieldReport[]
 
   @@index([availability])
   @@index([teamId])
 }
 
+/// Group of volunteers, optionally deployed to an incident.
 model Team {
   id             String   @id @default(cuid())
   name           String
   organizationId String?
-  incidentId     String?  // current deployment
+  incidentId     String? // current deployment
   status         String   @default("STANDBY") // STANDBY | DEPLOYED
   createdAt      DateTime @default(now())
 
@@ -371,6 +383,7 @@ model Team {
   tasks        Task[]
 }
 
+/// Work assigned to a volunteer or team. Only the assignee updates it; completed tasks are frozen with their reports.
 model Task {
   id          String     @id @default(cuid())
   title       String
@@ -398,6 +411,7 @@ model Task {
   @@index([incidentId])
 }
 
+/// Report filed from the field for a task, with an optional photograph. Never deleted.
 model FieldReport {
   id          String   @id @default(cuid())
   taskId      String
@@ -412,6 +426,7 @@ model FieldReport {
   @@index([taskId])
 }
 
+/// In-app notification for one user, created in the same transaction as the event that triggered it.
 model Notification {
   id        String   @id @default(cuid())
   userId    String
@@ -426,6 +441,7 @@ model Notification {
   @@index([userId, read, createdAt])
 }
 
+/// Audit trail of every state change (including rejected allocations and priority changes). Also feeds the live-update stream.
 model ActivityLog {
   id         String   @id @default(cuid())
   userId     String?

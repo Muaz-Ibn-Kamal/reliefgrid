@@ -72,7 +72,7 @@ export function IncidentDetailClient({ id }: { id: string }) {
             {inc.imageUrl && <img src={inc.imageUrl} alt={`Photo for ${inc.title}`} className="mt-3 max-h-72 rounded-lg object-cover" />}
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <div><dt className="text-xs text-slate-500">Location</dt><dd>{inc.location}</dd></div>
-              <div><dt className="text-xs text-slate-500">GPS</dt><dd><a className="inline-flex items-center gap-1 text-orange-700 hover:underline dark:text-orange-400" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${inc.latitude}&mlon=${inc.longitude}#map=13/${inc.latitude}/${inc.longitude}`}>{inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}<ExternalLink className="h-3 w-3" aria-hidden /></a></dd></div>
+              <div><dt className="text-xs text-slate-500">GPS</dt><dd><a className="inline-flex items-center gap-1 link" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${inc.latitude}&mlon=${inc.longitude}#map=13/${inc.latitude}/${inc.longitude}`}>{inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}<ExternalLink className="h-3 w-3" aria-hidden /></a></dd></div>
               <div><dt className="text-xs text-slate-500">Affected population</dt><dd className="tabular-nums">{fmt(inc.affectedPopulation)}</dd></div>
               <div><dt className="text-xs text-slate-500">Severity / location risk</dt><dd>{inc.severity} / 5 · {inc.locationRisk} / 5</dd></div>
               <div><dt className="text-xs text-slate-500">Priority score</dt><dd className="tabular-nums">{inc.priorityScore.toFixed(1)}{inc.priorityOverride && <span className="ml-1 text-xs text-slate-500">(manual override; calculated {label(inc.priorityLevel)})</span>}</dd></div>
@@ -82,7 +82,7 @@ export function IncidentDetailClient({ id }: { id: string }) {
             </dl>
           </Card>
 
-          <Card title={`Emergency requests (${inc.requests.length})`} action={canManage || me.data ? <Link className="text-sm font-medium text-orange-700 hover:underline dark:text-orange-400" href={`/requests?new=1&incidentId=${inc.id}`}>Add request</Link> : null}>
+          <Card title={`Emergency requests (${inc.requests.length})`} action={canManage || me.data ? <Link className="text-sm font-medium link" href={`/requests?new=1&incidentId=${inc.id}`}>Add request</Link> : null}>
             {!inc.requests.length ? <EmptyState title="No requests linked" /> : (
               <ul className="divide-y divide-slate-100 dark:divide-slate-800">{inc.requests.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"><span>{label(r.type)} · {fmt(r.quantity)} {r.unit} · {r.location}</span><span className="flex gap-1.5"><Badge value={r.priorityLevel} /><Badge value={r.status} /></span></li>

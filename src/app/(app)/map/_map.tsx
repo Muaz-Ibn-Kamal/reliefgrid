@@ -43,12 +43,12 @@ export default function LeafletMap({ incidents, shelters, requests, pin, nearest
           <Popup><b>{i.title}</b><br />{label(i.category)} · {label(lvl)} · {label(i.status)}<br />{i.affectedPopulation.toLocaleString()} affected<br /><Link href={`/incidents/${i.id}`}>View incident</Link></Popup>
         </CircleMarker>); })}
       {shelters.map((s) => (
-        <CircleMarker key={`s${s.id}`} center={[s.latitude, s.longitude]} radius={8} pathOptions={{ color: "#fff", weight: 2, fillColor: s.status === "OPEN" && s.availableCapacity > 0 ? "#2563eb" : "#64748b", fillOpacity: 0.95 }}>
+        <CircleMarker key={`s${s.id}`} center={[s.latitude, s.longitude]} radius={8} pathOptions={{ color: "#fff", weight: 2, fillColor: s.status === "OPEN" && s.availableCapacity > 0 ? "#2a78d6" : "#64748b", fillOpacity: 0.95 }}>
           <Popup><b>{s.name}</b><br />{s.occupancy.toLocaleString()} / {s.totalCapacity.toLocaleString()} occupied<br />{s.availableCapacity.toLocaleString()} places free · {label(s.status)}<br /><Link href={`/shelters/${s.id}`}>View shelter</Link></Popup>
         </CircleMarker>
       ))}
-      {pin && <CircleMarker center={[pin.lat, pin.lng]} radius={6} pathOptions={{ color: "#7c3aed", weight: 3, fillColor: "#fff", fillOpacity: 1 }}><Popup>Selected point</Popup></CircleMarker>}
-      {pin && nearest && <Polyline positions={[[pin.lat, pin.lng], [nearest.latitude, nearest.longitude]]} pathOptions={{ color: "#7c3aed", weight: 3, dashArray: "6 6" }} />}
+      {pin && <CircleMarker center={[pin.lat, pin.lng]} radius={6} pathOptions={{ color: "#181b1f", weight: 3, fillColor: "#fff", fillOpacity: 1 }}><Popup>Selected point</Popup></CircleMarker>}
+      {pin && nearest && <Polyline positions={[[pin.lat, pin.lng], [nearest.latitude, nearest.longitude]]} pathOptions={{ color: "#181b1f", weight: 3, dashArray: "6 6" }} />}
     </MapContainer>
   );
 }

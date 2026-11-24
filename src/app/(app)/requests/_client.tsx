@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Plus } from "lucide-react";
-import { Badge, Button, Field, Modal, Select, Spinner, Textarea, useAction } from "@/components/ui";
+import { Badge, Button, Field, Modal, Select, Spinner, Textarea, priorityRail, useAction } from "@/components/ui";
 import { ActivityTimeline, type ActivityRow } from "@/components/activity-timeline";
 import { ListView, refreshLists, type Col, type FilterDef } from "@/components/list";
 import { RequestForm } from "@/components/request-form";
@@ -43,7 +43,7 @@ function ReviewModal({ id, canReview, onClose }: { id: string; canReview: boolea
             <div><dt className="text-xs text-slate-500">Affected people</dt><dd>{fmt(data.affectedPeople)}</dd></div>
             <div><dt className="text-xs text-slate-500">Location</dt><dd>{data.location}</dd></div>
             <div><dt className="text-xs text-slate-500">Requester</dt><dd>{data.requesterName}{data.requesterContact ? ` · ${data.requesterContact}` : ""}{data.organization ? ` (${data.organization.name})` : ""}</dd></div>
-            {data.incident && <div><dt className="text-xs text-slate-500">Incident</dt><dd><Link className="text-orange-700 hover:underline dark:text-orange-400" href={`/incidents/${data.incident.id}`}>{data.incident.title}</Link></dd></div>}
+            {data.incident && <div><dt className="text-xs text-slate-500">Incident</dt><dd><Link className="link" href={`/incidents/${data.incident.id}`}>{data.incident.title}</Link></dd></div>}
           </dl>
           {canReview && (
             <div className="space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
@@ -96,7 +96,7 @@ function Inner() {
         <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" aria-hidden />New request</Button>
       </div>
       <ListView<Row> endpoint="/api/requests" columns={columns} filters={FILTERS} exportEntity="requests" onRow={(r) => setOpenId(r.id)}
-        rowClass={(r) => (r.priorityLevel === "CRITICAL" && ["PENDING", "VERIFIED"].includes(r.status) ? "bg-red-50 dark:bg-red-950/30" : undefined)} />
+        rowAccent={(r) => priorityRail(r.priorityLevel)} />
       <Modal open={creating} onClose={() => setCreating(false)} title="Submit emergency request" wide>
         <RequestForm mode="internal" incidentId={sp.get("incidentId") ?? undefined} onCancel={() => setCreating(false)} onDone={() => { setCreating(false); refreshLists(); }} />
       </Modal>

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { PageHeader, Badge, Button } from "@/components/ui";
+import { PageHeader, Badge, Button, priorityRail } from "@/components/ui";
 import { ListView, type Col, type FilterDef } from "@/components/list";
 import { INCIDENT_CATEGORIES, label } from "@/lib/constants";
 import { useApi, ago, fmt } from "@/lib/client";
@@ -44,7 +44,7 @@ export function IncidentsClient() {
         actions={canCreate && <Link href="/incidents/new"><Button><Plus className="h-4 w-4" aria-hidden />Report incident</Button></Link>} />
       <ListView<IncidentRow> endpoint="/api/incidents" columns={columns} filters={FILTERS} exportEntity={canExport ? "incidents" : undefined}
         onRow={(r) => router.push(`/incidents/${r.id}`)}
-        rowClass={(r) => ((r.priorityOverride ?? r.priorityLevel) === "CRITICAL" && r.status !== "RESOLVED" && r.status !== "CLOSED" ? "bg-red-50 border-l-4 border-l-red-600 dark:bg-red-950/30" : undefined)} />
+        rowAccent={(r) => priorityRail(r.priorityOverride ?? r.priorityLevel)} />
     </>
   );
 }

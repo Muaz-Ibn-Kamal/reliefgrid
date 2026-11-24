@@ -22,7 +22,7 @@ function CreateModal({ role, onClose, onDone }: { role: RoleName; onClose: () =>
         <FormError message={s.error} />
         <Field label="Team name" error={s.fieldError("name")}>{(i) => <Input id={i} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required />}</Field>
         {ops && <Field label="Organization (optional)">{(i) => <Select id={i} value={orgId} onChange={(e) => setOrgId(e.target.value)}><option value="">None</option>{orgs.data?.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}</Select>}</Field>}
-        {ops && <Field label="Initial members" hint="Hold Ctrl/Cmd to select several. Only available volunteers are listed.">{(i) => <select id={i} multiple size={6} value={members} onChange={(e) => setMembers(Array.from(e.target.selectedOptions, (o) => o.value))} className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900">{vols.data?.map((v) => <option key={v.id} value={v.id}>{v.user.name}</option>)}</select>}</Field>}
+        {ops && <Field label="Initial members" hint="Hold Ctrl/Cmd to select several. Only available volunteers are listed.">{(i) => <select id={i} multiple size={6} value={members} onChange={(e) => setMembers(Array.from(e.target.selectedOptions, (o) => o.value))} className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900">{vols.data?.map((v) => <option key={v.id} value={v.id}>{v.user.name}</option>)}</select>}</Field>}
         {!ops && <p className="text-xs text-slate-500">Members can be added by a coordinator after the team is created.</p>}
         <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" busy={s.busy}>Create</Button></div>
       </form>
@@ -42,7 +42,7 @@ function TeamModal({ team, role, onClose, onChanged }: { team: Team; role: RoleN
   return (
     <Modal open onClose={onClose} title={team.name} wide>
       <div className="space-y-4 text-sm">
-        <div className="flex flex-wrap items-center gap-2"><Badge value={team.status} />{team.incident ? <>Deployed to <Link className="text-orange-700 hover:underline dark:text-orange-400" href={`/incidents/${team.incident.id}`}>{team.incident.title}</Link></> : <span className="text-slate-500">On standby</span>}{team.organization && <span className="text-slate-500">· {team.organization.name}</span>}</div>
+        <div className="flex flex-wrap items-center gap-2"><Badge value={team.status} />{team.incident ? <>Deployed to <Link className="link" href={`/incidents/${team.incident.id}`}>{team.incident.title}</Link></> : <span className="text-slate-500">On standby</span>}{team.organization && <span className="text-slate-500">· {team.organization.name}</span>}</div>
         <div><h3 className="mb-2 font-semibold">Members ({team.members.length})</h3>
           {!team.members.length ? <p className="text-slate-500">No members yet.</p> : <ul className="divide-y divide-slate-100 dark:divide-slate-800">{team.members.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-2 py-1.5"><span>{m.user.name}{m.user.phone && <span className="text-slate-500"> · {m.user.phone}</span>}</span>
@@ -73,7 +73,7 @@ export default function TeamsClient() {
       <PageHeader title="Teams" subtitle={role === "VOLUNTEER" ? "Your assigned team and teammates." : "Organize volunteers into teams and deploy them to incidents."} actions={canCreate && <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" aria-hidden />Create team</Button>} />
       {isLoading || !role ? <Spinner /> : error ? <ErrorState error={error} retry={() => mutate()} /> : !data?.data.length ? <EmptyState title="No teams yet" hint={role === "VOLUNTEER" ? "You are not on a team yet." : "Create a team to coordinate volunteers."} /> : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{data.data.map((t) => (
-          <li key={t.id}><button className="w-full text-left" onClick={() => setOpenId(t.id)}><Card className="transition hover:border-orange-400">
+          <li key={t.id}><button className="w-full text-left" onClick={() => setOpenId(t.id)}><Card className="transition-colors hover:border-slate-400 dark:hover:border-slate-600">
             <div className="flex items-start justify-between gap-2"><h2 className="font-semibold">{t.name}</h2><Badge value={t.status} /></div>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t.members.length} member{t.members.length === 1 ? "" : "s"}{t.organization ? ` · ${t.organization.name}` : ""}</p>
             <p className="mt-1 text-xs text-slate-500">{t.incident ? `Deployed: ${t.incident.title}` : "On standby"}</p>

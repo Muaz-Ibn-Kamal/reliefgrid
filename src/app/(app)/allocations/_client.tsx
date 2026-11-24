@@ -76,7 +76,7 @@ function AllocatePanel() {
         {reqId && detail.isLoading && <Spinner />}
         {d && (
           <>
-            <p className="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800/50">Needs <b>{fmt(d.quantity)} {d.unit}</b> · already allocated <b>{fmt(allocated)}</b> · remaining <b className={remaining ? "text-orange-700" : "text-emerald-700"}>{fmt(remaining)}</b> · <Link className="text-orange-700 hover:underline dark:text-orange-400" href="/requests">view request</Link></p>
+            <p className="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800/50">Needs <b>{fmt(d.quantity)} {d.unit}</b> · already allocated <b>{fmt(allocated)}</b> · remaining <b className={remaining ? "text-slate-900 dark:text-white" : "text-emerald-700 dark:text-emerald-400"}>{fmt(remaining)}</b> · <Link className="link" href="/requests">view request</Link></p>
             {!remaining ? <EmptyState title="This request is fully allocated" /> : (
               <>
                 <Field label="Compatible resource (highest stock first)">{(id) => (
@@ -125,7 +125,7 @@ function DetailModal({ a, canUpdate, onClose }: { a: Alloc; canUpdate: boolean; 
     <Modal open onClose={onClose} title="Allocation" wide>
       <div className="space-y-4 text-sm">
         <ol className="grid gap-2 sm:grid-cols-3">
-          <li className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><div className="text-xs text-slate-500">Request</div><Link className="font-semibold text-orange-700 hover:underline dark:text-orange-400" href="/requests">{label(a.request.type)}</Link><div>{a.request.location}</div><Badge value={a.request.priorityLevel} /></li>
+          <li className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><div className="text-xs text-slate-500">Request</div><Link className="font-semibold link" href="/requests">{label(a.request.type)}</Link><div>{a.request.location}</div><Badge value={a.request.priorityLevel} /></li>
           <li className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><div className="text-xs text-slate-500">Resource</div><div className="font-semibold">{a.resource.name}</div><div>{fmt(a.quantity)} {a.resource.unit} allocated</div></li>
           <li className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><div className="text-xs text-slate-500">Responsible organization</div><div className="font-semibold">{a.organization.name}</div><Badge value={a.status} /></li>
         </ol>

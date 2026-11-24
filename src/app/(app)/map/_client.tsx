@@ -43,15 +43,15 @@ export function MapClient() {
         {([["incidents", "Incidents"], ["shelters", "Shelters"], ["requests", "Requests"]] as const).filter(([k]) => (k === "requests" ? canReq : k === "shelters" ? canShelters : true)).map(([k, l]) => (
           <label key={k} className="inline-flex items-center gap-1.5"><input type="checkbox" checked={layers[k]} onChange={(e) => setLayers({ ...layers, [k]: e.target.checked })} />{l}</label>
         ))}
-        <Select aria-label="Filter by priority" value={prio} onChange={(e) => setPrio(e.target.value)} className="w-auto"><option value="">All priorities</option>{["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((p) => <option key={p} value={p}>{label(p)}</option>)}</Select>
+        <Select aria-label="Filter by priority" value={prio} onChange={(e) => setPrio(e.target.value)} className="w-auto!"><option value="">All priorities</option>{["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((p) => <option key={p} value={p}>{label(p)}</option>)}</Select>
         {canShelters && <Button variant="secondary" size="sm" onClick={locate}><LocateFixed className="h-3.5 w-3.5" aria-hidden />Nearest shelter to me</Button>}
-        <ul className="ml-auto flex flex-wrap gap-3 text-xs" aria-label="Legend">{Object.entries(PRIORITY_COLOR).map(([k, c]) => <li key={k} className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full" style={{ background: c }} aria-hidden />{label(k)}</li>)}<li className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full bg-blue-600" aria-hidden />Shelter</li></ul>
+        <ul className="ml-auto flex flex-wrap gap-3 text-xs" aria-label="Legend">{Object.entries(PRIORITY_COLOR).map(([k, c]) => <li key={k} className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full" style={{ background: c }} aria-hidden />{label(k)}</li>)}<li className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full bg-[#2a78d6]" aria-hidden />Shelter</li></ul>
       </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"><LeafletMap incidents={incidents} shelters={shelters} requests={requests} pin={pin} nearest={near?.[0] ?? null} onPick={pick} /></div>
+      <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800"><LeafletMap incidents={incidents} shelters={shelters} requests={requests} pin={pin} nearest={near?.[0] ?? null} onPick={pick} /></div>
       {pin && canShelters && (
         <Card title="Nearest available shelters" className="mt-4">
           {nErr ? <p role="alert" className="text-sm text-red-600">{nErr}</p> : !near ? <Spinner /> : !near.length ? <p className="text-sm text-slate-500">No open shelter has free places.</p> : (
-            <ol className="space-y-1.5 text-sm">{near.map((s, i) => <li key={s.id}>{i + 1}. <Link className="font-semibold text-orange-700 hover:underline dark:text-orange-400" href={`/shelters/${s.id}`}>{s.name}</Link> · {s.distanceKm} km{i === 0 && <span className="ml-1 text-xs text-violet-700 dark:text-violet-300">(recommended, shown on map)</span>}</li>)}</ol>
+            <ol className="space-y-1.5 text-sm">{near.map((s, i) => <li key={s.id}>{i + 1}. <Link className="font-semibold link" href={`/shelters/${s.id}`}>{s.name}</Link> · {s.distanceKm} km{i === 0 && <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">(recommended, shown on map)</span>}</li>)}</ol>
           )}
         </Card>
       )}

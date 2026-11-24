@@ -39,8 +39,8 @@ export function LiveUpdates() {
   }, [mutate]);
   const text = state === "live" ? "Live" : state === "connecting" ? "Connecting" : "Reconnecting";
   return (
-    <span className="mr-1 hidden items-center gap-1.5 rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-600 sm:inline-flex dark:border-slate-700 dark:text-slate-300" role="status" aria-live="polite" title={state === "live" ? "Receiving live updates" : "Live updates paused; pages still refresh periodically"}>
-      <span className={cx("h-2 w-2 rounded-full", state === "live" ? "bg-emerald-500" : state === "connecting" ? "bg-slate-400" : "bg-amber-500")} aria-hidden />{text}
+    <span className="mr-2 hidden items-center gap-1.5 text-xs text-slate-500 sm:inline-flex dark:text-slate-400" role="status" aria-live="polite" title={state === "live" ? "Receiving live updates" : "Live updates paused; pages still refresh periodically"}>
+      <span className={cx("h-1.5 w-1.5 rounded-full", state === "live" ? "bg-triage-low" : state === "connecting" ? "bg-slate-400" : "bg-triage-medium")} aria-hidden />{text}
     </span>
   );
 }

@@ -26,10 +26,10 @@ function TaskModal({ task, onClose, onChanged }: { task: Task; onClose: () => vo
   return (
     <Modal open onClose={onClose} title={task.title} wide>
       <div className="space-y-4 text-sm">
-        <div className="flex flex-wrap items-center gap-2"><Badge value={task.status} />{task.incident && <Link className="text-orange-700 hover:underline dark:text-orange-400" href={`/incidents/${task.incident.id}`}>{task.incident.title}</Link>}</div>
+        <div className="flex flex-wrap items-center gap-2"><Badge value={task.status} />{task.incident && <Link className="link" href={`/incidents/${task.incident.id}`}>{task.incident.title}</Link>}</div>
         {task.description && <p className="whitespace-pre-line">{task.description}</p>}
         <p className="flex flex-wrap items-center gap-1.5"><MapPin className="h-4 w-4" aria-hidden />{task.location} ·{" "}
-          <a className="inline-flex items-center gap-1 text-orange-700 hover:underline dark:text-orange-400" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${task.latitude}&mlon=${task.longitude}#map=15/${task.latitude}/${task.longitude}`}>{task.latitude.toFixed(4)}, {task.longitude.toFixed(4)}<ExternalLink className="h-3 w-3" aria-hidden /></a></p>
+          <a className="inline-flex items-center gap-1 link" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${task.latitude}&mlon=${task.longitude}#map=15/${task.latitude}/${task.longitude}`}>{task.latitude.toFixed(4)}, {task.longitude.toFixed(4)}<ExternalLink className="h-3 w-3" aria-hidden /></a></p>
         {task.team && <p className="flex flex-wrap items-center gap-1.5"><Users className="h-4 w-4" aria-hidden /><b>{task.team.name}:</b> {task.team.members.map((m) => m.user.name).join(", ")}</p>}
 
         {!done && (
@@ -69,10 +69,10 @@ export default function TasksClient() {
   return (
     <>
       <PageHeader title="My tasks" subtitle="Tasks assigned to you. Update progress and file field reports from site." actions={
-        <Select aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)} className="w-auto"><option value="">All statuses</option>{["ASSIGNED", "IN_PROGRESS", "COMPLETED"].map((s) => <option key={s} value={s}>{label(s)}</option>)}</Select>} />
+        <Select aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)} className="w-auto!"><option value="">All statuses</option>{["ASSIGNED", "IN_PROGRESS", "COMPLETED"].map((s) => <option key={s} value={s}>{label(s)}</option>)}</Select>} />
       {isLoading ? <Spinner /> : error ? <ErrorState error={error} retry={() => mutate()} /> : !data?.data.length ? <EmptyState title="No tasks assigned" hint="A coordinator will assign you tasks when help is needed." /> : (
         <ul className="grid gap-3 md:grid-cols-2">{data.data.map((t) => (
-          <li key={t.id}><button className="w-full text-left" onClick={() => setOpenId(t.id)}><Card className="transition hover:border-orange-400">
+          <li key={t.id}><button className="w-full text-left" onClick={() => setOpenId(t.id)}><Card className="transition-colors hover:border-slate-400 dark:hover:border-slate-600">
             <div className="flex items-start justify-between gap-2"><h2 className="font-semibold">{t.title}</h2><Badge value={t.status} /></div>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t.location}</p>
             <p className="mt-2 text-xs text-slate-500">{t.incident?.title ?? "No incident"} · {t.reports.length} report{t.reports.length === 1 ? "" : "s"} · assigned {ago(t.createdAt)}</p>

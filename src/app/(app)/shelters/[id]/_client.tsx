@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Printer } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, Select, Spinner, Stat, useAction } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, Select, Spinner, Stat, StatGrid, useAction } from "@/components/ui";
 import { CapacityBar } from "@/components/capacity-bar";
 import { FormError, useSubmit } from "@/components/rg-submit";
 import { api, dt, fmt, useApi } from "@/lib/client";
@@ -37,7 +37,7 @@ export function ShelterDetailClient({ id }: { id: string }) {
         <div><h1 className="text-2xl font-bold tracking-tight">{sh.name}</h1><p className="text-sm text-slate-500">{sh.location} · {sh.latitude.toFixed(4)}, {sh.longitude.toFixed(4)} · Manager: {sh.manager?.name ?? "Unassigned"}{sh.manager?.phone ? ` (${sh.manager.phone})` : ""}</p></div>
         <div className="flex items-center gap-2"><Badge value={sh.status} /><Button variant="secondary" className="print:hidden" onClick={() => window.print()}><Printer className="h-4 w-4" aria-hidden />Print report</Button></div>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3"><Stat label="Total capacity" value={fmt(sh.totalCapacity)} /><Stat label="Current occupancy" value={fmt(sh.occupancy)} tone="amber" /><Stat label="Available" value={fmt(sh.availableCapacity)} tone={sh.availableCapacity ? "green" : "red"} /></div>
+      <StatGrid className="sm:grid-cols-3"><Stat label="Total capacity" value={fmt(sh.totalCapacity)} /><Stat label="Current occupancy" value={fmt(sh.occupancy)} /><Stat label="Available" value={fmt(sh.availableCapacity)} tone={sh.availableCapacity ? "green" : "red"} /></StatGrid>
       <Card title="Occupancy"><CapacityBar occupancy={sh.occupancy} total={sh.totalCapacity} /><div className="mt-3 flex flex-wrap gap-1.5">{sh.facilities.length ? sh.facilities.map((x) => <span key={x} className="rounded bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800">{x}</span>) : <span className="text-sm text-slate-500">No facilities listed.</span>}</div></Card>
 
       {canManage && (
@@ -69,7 +69,7 @@ export function ShelterDetailClient({ id }: { id: string }) {
 
       <Card title="Occupancy history">
         {chart.length < 2 ? <EmptyState title="Not enough history to chart yet" /> : (
-          <div className="h-56" role="img" aria-label="Occupancy over time"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chart}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="t" fontSize={11} /><YAxis fontSize={11} domain={[0, sh.totalCapacity]} /><Tooltip /><Area type="monotone" dataKey="occupancy" stroke="#0072B2" fill="#0072B2" fillOpacity={0.25} /></AreaChart></ResponsiveContainer></div>
+          <div className="h-56" role="img" aria-label="Occupancy over time"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chart}><CartesianGrid vertical={false} stroke="#e3e6ea" /><XAxis dataKey="t" fontSize={11} /><YAxis fontSize={11} domain={[0, sh.totalCapacity]} /><Tooltip /><Area type="monotone" dataKey="occupancy" stroke="#2a78d6" fill="#2a78d6" fillOpacity={0.25} /></AreaChart></ResponsiveContainer></div>
         )}
         <div className="mt-4 overflow-x-auto"><table className="w-full text-sm"><thead className="text-left text-xs uppercase text-slate-500"><tr><th className="py-1.5 pr-3">When</th><th className="pr-3">Change</th><th className="pr-3">Capacity</th><th>Note</th></tr></thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{sh.occupancyLogs.map((l) => <tr key={l.id}><td className="py-1.5 pr-3 whitespace-nowrap">{dt(l.createdAt)}</td><td className="pr-3 tabular-nums">{fmt(l.previous)} → {fmt(l.current)}</td><td className="pr-3 tabular-nums">{fmt(l.capacity)}</td><td className="text-slate-600 dark:text-slate-400">{l.note ?? ""}</td></tr>)}</tbody></table></div>

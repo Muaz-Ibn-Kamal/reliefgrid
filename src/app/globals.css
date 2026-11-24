@@ -1,11 +1,59 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme inline {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --color-brand: #c2410c;
+/*
+ * ReliefGrid design tokens.
+ * Surfaces stay quiet and neutral; color is reserved for urgency. Priority uses a triage scale
+ * (critical red, high orange, medium yellow, low green) that always appears next to a text label.
+ */
+@theme {
+  --font-sans: "Public Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* One cool, low-chroma neutral scale for the whole interface (replaces Tailwind's slate values). */
+  --color-slate-50: #f7f8f9;
+  --color-slate-100: #eff1f3;
+  --color-slate-200: #e3e6ea;
+  --color-slate-300: #cdd2d8;
+  --color-slate-400: #9ba3ad;
+  --color-slate-500: #67707b;
+  --color-slate-600: #525a65;
+  --color-slate-700: #3b424b;
+  --color-slate-800: #262b31;
+  --color-slate-900: #181b1f;
+  --color-slate-950: #0f1114;
+
+  /* Triage scale for priority and state (validated status palette; never used for decoration). */
+  --color-triage-critical: #d03b3b;
+  --color-triage-high: #ec835a;
+  --color-triage-medium: #fab219;
+  --color-triage-low: #0ca30c;
+  /* In-progress state (verified, assigned, in transit). */
+  --color-signal-info: #2a78d6;
 }
 
-body { @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased; font-family: var(--font-sans); }
-.leaflet-container { font-family: var(--font-sans); border-radius: 0.75rem; z-index: 0; }
-:focus-visible { outline: 2px solid #ea580c; outline-offset: 2px; }
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    font-family: var(--font-sans);
+  }
+  ::selection { background-color: rgb(42 120 214 / 0.18); }
+  :focus-visible { outline: 2px solid var(--color-signal-info); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* Inline links: ink text with a quiet underline that strengthens on hover. */
+@utility link {
+  color: var(--color-slate-900);
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-slate-300);
+  text-underline-offset: 3px;
+  &:hover { text-decoration-color: currentColor; }
+  @variant dark {
+    color: var(--color-slate-100);
+    text-decoration-color: var(--color-slate-600);
+  }
+}
+
+.leaflet-container { font-family: var(--font-sans); z-index: 0; }

@@ -90,7 +90,7 @@ function OrgsTab({ orgs, error, loading, reload }: { orgs: Org[]; error?: Error;
     <div className="space-y-3">
       <div className="flex justify-end"><Button onClick={() => setEdit("new")}><Plus className="h-4 w-4" aria-hidden />New organization</Button></div>
       {!orgs.length ? <EmptyState title="No organizations" /> : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-800/60"><tr>{["Organization", "Region", "Users", "Resources", "Shelters", "Status", ""].map((h) => <th key={h} scope="col" className="px-3 py-2.5">{h}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{orgs.map((o) => (
             <tr key={o.id}><td className="px-3 py-2.5"><div className="font-semibold">{o.name}</div><div className="text-xs text-slate-500">{o.type}{o.contact ? ` · ${o.contact}` : ""}</div></td><td className="px-3">{o.region}</td><td className="px-3 tabular-nums">{o._count.users}</td><td className="px-3 tabular-nums">{o._count.resources}</td><td className="px-3 tabular-nums">{o._count.shelters}</td>
@@ -112,7 +112,7 @@ export default function UsersClient() {
     <>
       <PageHeader title="User management" subtitle="Provision accounts, manage organizations and monitor system activity." />
       <div role="tablist" aria-label="Administration sections" className="mb-4 flex gap-1 border-b border-slate-200 dark:border-slate-800">
-        {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cx("-mb-px border-b-2 px-4 py-2 text-sm font-medium", tab === k ? "border-orange-700 text-orange-800 dark:text-orange-300" : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400")}>{l}</button>)}
+        {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cx("-mb-px border-b-2 px-4 py-2 text-sm font-medium", tab === k ? "border-slate-900 text-slate-900 dark:border-white dark:text-white" : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400")}>{l}</button>)}
       </div>
       {tab === "users" && <UsersTab orgs={orgs.data ?? []} selfId={me.data?.user.id} />}
       {tab === "orgs" && <OrgsTab orgs={orgs.data ?? []} error={orgs.error} loading={orgs.isLoading} reload={() => orgs.mutate()} />}
