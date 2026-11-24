@@ -2,12 +2,13 @@ import { route, body, page, paged, enumParam } from "@/lib/api";
 import { db } from "@/lib/db";
 import { allocationCreate } from "@/lib/validators";
 import { allocate } from "@/lib/services/allocation";
+import { orgIdOf } from "@/lib/scope";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const GET = route({ roles: ["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "RELIEF_ORGANIZATION"] }, async ({ user, sp }) => {
   const pg = page(sp);
   const where: Prisma.AllocationWhereInput = {
-    ...(user.role === "RELIEF_ORGANIZATION" ? { organizationId: user.organizationId! } : {}),
+    ...(user.role === "RELIEF_ORGANIZATION" ? { organizationId: orgIdOf(user) } : {}),
     status: enumParam(sp, "status", ["ALLOCATED", "IN_TRANSIT", "DELIVERED", "CANCELLED"] as const),
     ...(sp.get("requestId") ? { requestId: sp.get("requestId")! } : {}),
   };

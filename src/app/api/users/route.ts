@@ -26,6 +26,7 @@ export const POST = route({ roles: ["SYSTEM_ADMIN"] }, async ({ user, req }) => 
   const d = await body(req, userCreate);
   if (await db.user.findUnique({ where: { email: d.email } })) throw conflict("Email already registered");
   if (d.role === "RELIEF_ORGANIZATION" && !d.organizationId) throw badRequest("Relief organization users need an organization");
+  if (d.organizationId && !(await db.organization.findUnique({ where: { id: d.organizationId } }))) throw badRequest("Organization not found");
   const u = await db.user.create({
     data: { name: d.name, email: d.email, role: d.role, organizationId: d.organizationId ?? null, passwordHash: await hashPassword(d.password), ...(d.role === "VOLUNTEER" ? { volunteer: { create: {} } } : {}) },
     select: { id: true, name: true, email: true, role: true },

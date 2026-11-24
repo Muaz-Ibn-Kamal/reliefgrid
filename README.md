@@ -32,7 +32,7 @@ Citizens can request help without an account at **`/help`**.
 
 | Area | What is implemented |
 |---|---|
-| **Roles and security** | 5 roles with per-endpoint role allow-lists, organization isolation, server-side page guards, bcrypt + signed `httpOnly` session cookie, Zod validation, same-origin CSRF check, rate limiting, CSP and security headers, full audit log |
+| **Roles and security** | 5 roles with per-endpoint role allow-lists, organization isolation, server-side page guards, bcrypt + signed `httpOnly` session cookie revoked on password change, Zod validation with size limits, same-origin CSRF check, rate limits shared across instances, upload quotas, CSP and security headers, full audit log ([security audit](docs/SECURITY.md)) |
 | **Incidents** | Report with category, GPS ("use my location"), severity, location risk, affected population and photo; priority score and level; coordinator assignment; status workflow; manual priority override; complete change history |
 | **Emergency requests** | 6 request types; staff form and public citizen form; **duplicate detection** (same type within ~1 km in 48 h, with explicit override); verify, reject, set urgency, complete |
 | **Inventory** | Register resources; restock, adjust and transfer out; **append-only stock ledger** with running balance; low-stock and availability filters |
@@ -74,6 +74,7 @@ More detail:
 - [docs/DATABASE.md](docs/DATABASE.md): ER diagram, tables, constraints, indexes, migrations.
 - [docs/API.md](docs/API.md): every endpoint with roles, parameters and errors.
 - [docs/BUSINESS_LOGIC.md](docs/BUSINESS_LOGIC.md): every rule, where it is enforced and which test proves it.
+- [docs/SECURITY.md](docs/SECURITY.md): security model, audit findings and how each was fixed and re-tested.
 
 ## Project structure
 
@@ -92,7 +93,7 @@ src/
 tests/
   rules.test.ts      13 integration tests for the business rules (real PostgreSQL)
   e2e/               browser checks: 21 workflows, page sweep across all roles, real-time
-docs/                DATABASE.md · API.md · BUSINESS_LOGIC.md · screenshots/
+docs/                DATABASE.md · API.md · BUSINESS_LOGIC.md · SECURITY.md · screenshots/
 scripts/smoke.sh     curl smoke test: every page and key API for all 5 roles
 ```
 
@@ -145,6 +146,7 @@ export BASE_URL=http://localhost:3000 PSQL_URL="postgresql://USER:PASSWORD@HOST:
 python tests/e2e/page_sweep.py   # every page × every role: no JS errors, 5xx or error screens
 python tests/e2e/workflows.py    # 21 end-to-end workflows with database assertions (reseed afterwards)
 python tests/e2e/realtime.py     # one user's change appears on another user's screen via SSE
+python tests/e2e/security.py     # 21 security regression checks from the audit (docs/SECURITY.md)
 BASE=$BASE_URL ./scripts/smoke.sh
 ```
 
@@ -168,10 +170,11 @@ To deploy your own copy with the [Vercel CLI](https://vercel.com/docs/cli):
    vercel link
    vercel integration add neon --meta region=sin1
    ```
-2. **Add the session secret** (32+ characters) for production and preview:
+2. **Add the session secret** (32+ characters) for production and preview, and turn on demo mode if the demo logins will be public:
    ```bash
    openssl rand -base64 32 | vercel env add AUTH_SECRET production --sensitive
    openssl rand -base64 32 | vercel env add AUTH_SECRET preview --sensitive
+   vercel env add DEMO_MODE production --value true --yes
    ```
 3. **Migrate and seed** once, using the direct connection string:
    ```bash
@@ -183,7 +186,8 @@ To deploy your own copy with the [Vercel CLI](https://vercel.com/docs/cli):
 Production notes:
 - Live updates and polling pause while a tab is hidden or idle for 10 minutes and catch up on return, so a forgotten tab doesn't hold a function open or keep the database awake.
 - The SSE stream runs on the Node.js runtime and ends every 4 minutes; browsers reconnect automatically.
-- The rate limiter is in-memory per instance; use Redis or Upstash when scaling out.
+- Rate limits live in Postgres, so they hold across serverless instances without a separate Redis.
+- `DEMO_MODE=true` stops visitors from changing the shared demo accounts' passwords or deactivating them.
 - Images are stored in Postgres; for large volumes, move them to object storage.
 
 ## Requirement coverage

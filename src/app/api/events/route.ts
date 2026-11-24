@@ -1,5 +1,7 @@
 import { route } from "@/lib/api";
 import { db } from "@/lib/db";
+import { rateLimit } from "@/lib/ratelimit";
+import { ApiError } from "@/lib/errors";
 
 const TICK_MS = 3000;
 const MAX_STREAM_MS = 4 * 60_000; // end streams periodically (serverless-friendly); EventSource reconnects on its own
@@ -9,7 +11,9 @@ const MAX_STREAM_MS = 4 * 60_000; // end streams periodically (serverless-friend
  * pages revalidate immediately instead of waiting for their polling interval. Carries no record data or ids:
  * clients refetch through the normal, permission-checked endpoints.
  */
-export const GET = route({}, async ({ req }) => {
+export const GET = route({}, async ({ user, req }) => {
+  // Each open stream holds a function instance; cap how often one account can (re)open them.
+  if (!(await rateLimit(`sse:${user.id}`, 60, 10 * 60_000))) throw new ApiError(429, "Too many live-update connections; pages still refresh on their own");
   const enc = new TextEncoder();
   const started = Date.now();
   let last = new Date();

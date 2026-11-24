@@ -4,6 +4,7 @@ import { resourceCreate } from "@/lib/validators";
 import { RESOURCE_CATEGORIES } from "@/lib/constants";
 import { registerResource } from "@/lib/services/resource";
 import { forbidden } from "@/lib/errors";
+import { orgIdOf } from "@/lib/scope";
 import type { Prisma } from "@/generated/prisma/client";
 
 const READ = ["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "RELIEF_ORGANIZATION"] as const;
@@ -12,7 +13,7 @@ export const GET = route({ roles: READ }, async ({ user, sp }) => {
   const pg = page(sp);
   const q = sp.get("q")?.trim();
   // Relief orgs see only their own inventory; coordinators/admins see all (needed for allocation)
-  const scope: Prisma.ResourceWhereInput = user.role === "RELIEF_ORGANIZATION" ? { organizationId: user.organizationId! } : sp.get("organizationId") ? { organizationId: sp.get("organizationId")! } : {};
+  const scope: Prisma.ResourceWhereInput = user.role === "RELIEF_ORGANIZATION" ? { organizationId: orgIdOf(user) } : sp.get("organizationId") ? { organizationId: sp.get("organizationId")! } : {};
   const where: Prisma.ResourceWhereInput = {
     ...scope,
     category: enumParam(sp, "category", RESOURCE_CATEGORIES),

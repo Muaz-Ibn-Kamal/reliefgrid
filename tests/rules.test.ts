@@ -9,6 +9,14 @@ import { updateIncident, createIncident } from "../src/lib/services/incident";
 import { createTask, updateTask, submitFieldReport } from "../src/lib/services/volunteer";
 import { scoreIncident, scoreRequest } from "../src/lib/priority";
 import { ApiError } from "../src/lib/errors";
+import { rateLimit } from "../src/lib/ratelimit";
+import { createTeam, updateTeam, teamScope } from "../src/lib/services/team";
+import { updateUserByAdmin, updateOwnProfile } from "../src/lib/services/user";
+import { assertUploadAllowed, UPLOAD_LIMITS } from "../src/lib/services/upload";
+import { assertDemoAccountEditable } from "../src/lib/demo";
+import { orgIdOf } from "../src/lib/scope";
+import { hashPassword } from "../src/lib/password";
+import * as V from "../src/lib/validators";
 
 const T = `t${Date.now()}`;
 let coord: any, admin: any, orgA: any, orgB: any, orgUserA: any, orgUserB: any, shelterMgr: any, shelterMgr2: any, volU1: any, volU2: any, vol1: any, vol2: any;
@@ -172,4 +180,90 @@ test.after(async () => { await db.$disconnect(); });
 test("Volunteer profile can be created without skills (DB default, admin-created accounts)", async () => {
   const u = await db.user.create({ data: { email: `${T}-noskill@x.test`, name: "T noskill", role: "VOLUNTEER", passwordHash: "x", volunteer: { create: {} } }, include: { volunteer: true } });
   assert.deepEqual(u.volunteer?.skills, []);
+});
+
+// ------------------------------------------------------------------ security regressions (audit 2026-11-25)
+
+test("security: relief orgs only see and staff their own teams", async () => {
+  const mkVol = async (orgId: string) => { const u = await mkUser("VOLUNTEER", orgId); return db.volunteer.create({ data: { userId: u.id, skills: [] } }); };
+  const volA = await mkVol(orgA.id), volB = await mkVol(orgB.id);
+  assert.deepEqual(teamScope(as(orgUserA)), { organizationId: orgA.id });
+  assert.equal((await db.team.findMany({ where: teamScope(as(shelterMgr)) })).length, 0);
+  await rejects(createTeam(as(orgUserA), { name: "T steal", memberIds: [volB.id] }), 403, /own organization/);
+  assert.equal((await db.volunteer.findUniqueOrThrow({ where: { id: volB.id } })).teamId, null, "a refused move must not change the volunteer");
+  const teamA = await createTeam(as(orgUserA), { name: "T team A", memberIds: [volA.id] });
+  assert.equal((await db.volunteer.findUniqueOrThrow({ where: { id: volA.id } })).teamId, teamA.id);
+  await rejects(updateTeam(as(orgUserA), teamA.id, { addMembers: [volB.id] }), 403);
+  const teamB = await createTeam(as(orgUserB), { name: "T team B", memberIds: [] });
+  await rejects(updateTeam(as(orgUserA), teamB.id, { name: "renamed" }), 403);
+  await rejects(createTeam(as(coord), { name: "T ghost", memberIds: ["doesnotexist"] }), 400);
+  await createTeam(as(coord), { name: "T coord team", memberIds: [volB.id] }); // coordinators may staff across organizations
+  assert.throws(() => orgIdOf({ id: "x", role: "RELIEF_ORGANIZATION", organizationId: null }), (e: any) => e.status === 403);
+});
+
+test("security: admin cannot leave a relief-organization user without an organization", async () => {
+  await rejects(updateUserByAdmin(as(admin), orgUserA.id, { organizationId: null }), 400);
+  await rejects(updateUserByAdmin(as(admin), volU2.id, { role: "RELIEF_ORGANIZATION" }), 400);
+  await rejects(updateUserByAdmin(as(admin), orgUserA.id, { organizationId: "doesnotexist" }), 400);
+  await rejects(updateUserByAdmin(as(admin), admin.id, { active: false }), 400);
+});
+
+test("security: a password change revokes other sessions; shared demo accounts are protected in demo mode", async () => {
+  const u = await db.user.create({ data: { email: `${T}-pw@x.test`, name: "T pw", role: "VOLUNTEER", passwordHash: await hashPassword("OldPassw0rd!") } });
+  const me = { ...as(u), email: u.email };
+  await rejects(updateOwnProfile(me, { currentPassword: "wrong", newPassword: "NewPassw0rd!" }), 400);
+  const r = await updateOwnProfile(me, { currentPassword: "OldPassw0rd!", newPassword: "NewPassw0rd!" });
+  assert.equal(r.newSessionVersion, 1);
+  assert.equal((await db.user.findUniqueOrThrow({ where: { id: u.id } })).sessionVersion, 1, "tokens signed with version 0 are now rejected");
+  assert.equal((await updateOwnProfile(me, { name: "T renamed" })).newSessionVersion, undefined, "profile edits keep sessions");
+  const prev = process.env.DEMO_MODE;
+  try {
+    process.env.DEMO_MODE = "true";
+    assert.throws(() => assertDemoAccountEditable("Admin@ReliefGrid.demo", "Editing"), (e: any) => e.status === 403);
+    assert.doesNotThrow(() => assertDemoAccountEditable("volunteer7@reliefgrid.demo", "Editing")); // only the five shared accounts
+    await rejects(updateOwnProfile({ ...me, email: "volunteer@reliefgrid.demo" }, { currentPassword: "NewPassw0rd!", newPassword: "Hijacked1!" }), 403);
+    process.env.DEMO_MODE = "false";
+    assert.doesNotThrow(() => assertDemoAccountEditable("admin@reliefgrid.demo", "Editing"));
+  } finally {
+    process.env.DEMO_MODE = prev;
+  }
+});
+
+test("security: the shared rate limiter counts across calls and resets after its window", async () => {
+  const key = `${T}-rl`;
+  const seen = [];
+  for (let i = 0; i < 4; i++) seen.push(await rateLimit(key, 3, 1500));
+  assert.deepEqual(seen, [true, true, true, false]);
+  await new Promise((r) => setTimeout(r, 1700));
+  assert.equal(await rateLimit(key, 3, 1500), true);
+});
+
+test("security: image uploads are rate limited and capped per account", async () => {
+  const heavy = await mkUser("VOLUNTEER");
+  const MB5 = 5 * 1024 * 1024; // the database caps each stored image at 5 MB (Upload_size_range)
+  await db.upload.createMany({ data: Array.from({ length: 5 }, () => ({ contentType: "image/png", size: MB5, data: Buffer.alloc(MB5), uploadedById: heavy.id })) });
+  await rejects(assertUploadAllowed(heavy.id, 100), 413);
+  await db.upload.deleteMany({ where: { uploadedById: heavy.id } });
+  const busy = await mkUser("VOLUNTEER");
+  for (let i = 0; i < UPLOAD_LIMITS.perHour; i++) await assertUploadAllowed(busy.id, 10);
+  await rejects(assertUploadAllowed(busy.id, 10), 429);
+});
+
+test("security: validators bound ids, quantities and arrays", () => {
+  const bad = (schema: any, v: unknown) => assert.equal(schema.safeParse(v).success, false, JSON.stringify(v).slice(0, 80));
+  bad(V.allocationCreate, { requestId: "x".repeat(65), resourceId: "r", quantity: 1 });
+  bad(V.allocationCreate, { requestId: "q", resourceId: "r", quantity: 3_000_000_000 });
+  bad(V.stockAdjust, { type: "RESTOCK", delta: 1e12 });
+  bad(V.occupancyUpdate, { delta: 5_000_000 });
+  bad(V.teamCreate, { name: "T", memberIds: Array(101).fill("v") });
+  bad(V.incidentUpdate, { affectedPopulation: 3_000_000_000 });
+  assert.equal(V.allocationCreate.safeParse({ requestId: "q", resourceId: "r", quantity: 5 }).success, true);
+});
+
+test("security: delivery QR tokens are long random values, not sequential ids", async () => {
+  const res = await mkRes(orgA.id, 50);
+  const req = await mkReq({ quantity: 5 });
+  const a = await allocate(as(coord), { requestId: req.id, resourceId: res.id, quantity: 5 });
+  const token = (await db.allocation.findUniqueOrThrow({ where: { id: a.id } })).qrToken;
+  assert.match(token, /^[A-Za-z0-9_-]{24}$/);
 });

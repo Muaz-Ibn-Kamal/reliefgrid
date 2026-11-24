@@ -5,6 +5,8 @@ const text = (max: number, min = 1) => z.string().trim().min(min).max(max);
 const lat = z.number().min(-90).max(90);
 const lng = z.number().min(-180).max(180);
 const level5 = z.number().int().min(1).max(5);
+/** Record ids (cuid). Bounded so oversized strings never reach a query. */
+const id = z.string().trim().min(1).max(64);
 
 export const incidentCreate = z.object({
   title: text(160, 4),
@@ -23,14 +25,14 @@ export const incidentUpdate = z.object({
   status: z.enum(["REPORTED", "VERIFIED", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(),
   severity: level5.optional(),
   locationRisk: level5.optional(),
-  affectedPopulation: z.number().int().min(0).optional(),
-  coordinatorId: z.string().nullable().optional(),
+  affectedPopulation: z.number().int().min(0).max(100_000_000).optional(),
+  coordinatorId: id.nullable().optional(),
   priorityOverride: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).nullable().optional(),
   note: text(500).optional(),
 });
 
 export const requestCreate = z.object({
-  incidentId: z.string().optional(),
+  incidentId: id.optional(),
   type: z.enum(REQUEST_TYPES),
   quantity: z.number().int().min(1).max(10_000_000),
   unit: text(30).default("units"),
@@ -52,7 +54,7 @@ export const requestReview = z.object({
 });
 
 export const resourceCreate = z.object({
-  organizationId: z.string().optional(),
+  organizationId: id.optional(),
   name: text(120),
   category: z.enum(RESOURCE_CATEGORIES),
   unit: text(30),
@@ -65,20 +67,20 @@ export const resourceUpdate = z.object({
 });
 export const stockAdjust = z.object({
   type: z.enum(["RESTOCK", "ADJUST", "TRANSFER_OUT"]),
-  delta: z.number().int().refine((n) => n !== 0, "delta must not be 0"),
+  delta: z.number().int().min(-100_000_000).max(100_000_000).refine((n) => n !== 0, "delta must not be 0"),
   reason: text(300).optional(),
   toLocation: text(200).optional(),
 });
 
 export const allocationCreate = z.object({
-  requestId: z.string(),
-  resourceId: z.string(),
-  quantity: z.number().int().min(1),
+  requestId: id,
+  resourceId: id,
+  quantity: z.number().int().min(1).max(10_000_000),
   notes: text(500).optional(),
 });
 export const distributionUpdate = z.object({
   status: z.enum(["IN_TRANSIT", "DELIVERED", "CANCELLED"]),
-  deliveredQty: z.number().int().min(0).optional(),
+  deliveredQty: z.number().int().min(0).max(10_000_000).optional(),
   notes: text(500).optional(),
 });
 
@@ -88,10 +90,10 @@ export const shelterCreate = z.object({
   latitude: lat,
   longitude: lng,
   totalCapacity: z.number().int().min(1).max(1_000_000),
-  occupancy: z.number().int().min(0).default(0),
+  occupancy: z.number().int().min(0).max(1_000_000).default(0),
   facilities: z.array(text(60)).max(20).default([]),
-  managerId: z.string().nullable().optional(),
-  organizationId: z.string().nullable().optional(),
+  managerId: id.nullable().optional(),
+  organizationId: id.nullable().optional(),
 });
 export const shelterUpdate = z.object({
   name: text(120).optional(),
@@ -99,10 +101,10 @@ export const shelterUpdate = z.object({
   totalCapacity: z.number().int().min(1).max(1_000_000).optional(),
   facilities: z.array(text(60)).max(20).optional(),
   status: z.enum(["OPEN", "FULL", "CLOSED"]).optional(),
-  managerId: z.string().nullable().optional(),
+  managerId: id.nullable().optional(),
 });
 export const occupancyUpdate = z
-  .object({ occupancy: z.number().int().min(0).optional(), delta: z.number().int().optional(), note: text(300).optional() })
+  .object({ occupancy: z.number().int().min(0).max(1_000_000).optional(), delta: z.number().int().min(-1_000_000).max(1_000_000).optional(), note: text(300).optional() })
   .refine((v) => (v.occupancy === undefined) !== (v.delta === undefined), "Provide exactly one of occupancy or delta");
 
 export const taskCreate = z.object({
@@ -111,10 +113,10 @@ export const taskCreate = z.object({
   location: text(200),
   latitude: lat,
   longitude: lng,
-  incidentId: z.string().optional(),
-  requestId: z.string().optional(),
-  volunteerId: z.string().optional(),
-  teamId: z.string().optional(),
+  incidentId: id.optional(),
+  requestId: id.optional(),
+  volunteerId: id.optional(),
+  teamId: id.optional(),
 });
 export const taskUpdate = z.object({
   status: z.enum(["IN_PROGRESS", "COMPLETED"]),
@@ -122,14 +124,14 @@ export const taskUpdate = z.object({
   photoUrl: z.string().regex(/^\/api\/uploads\/[a-z0-9]{20,40}$/, "Upload the image first").optional(),
 });
 export const fieldReportCreate = z.object({ content: text(4000, 3), photoUrl: z.string().regex(/^\/api\/uploads\/[a-z0-9]{20,40}$/, "Upload the image first").optional() });
-export const taskReassign = z.object({ volunteerId: z.string().nullable().optional(), teamId: z.string().nullable().optional() });
+export const taskReassign = z.object({ volunteerId: id.nullable().optional(), teamId: id.nullable().optional() });
 
-export const teamCreate = z.object({ name: text(100), organizationId: z.string().optional(), memberIds: z.array(z.string()).default([]) });
+export const teamCreate = z.object({ name: text(100), organizationId: id.optional(), memberIds: z.array(id).max(100).default([]) });
 export const teamUpdate = z.object({
   name: text(100).optional(),
-  addMembers: z.array(z.string()).optional(),
-  removeMembers: z.array(z.string()).optional(),
-  deployToIncidentId: z.string().nullable().optional(),
+  addMembers: z.array(id).max(100).optional(),
+  removeMembers: z.array(id).max(100).optional(),
+  deployToIncidentId: id.nullable().optional(),
 });
 
 export const registerSchema = z.object({
@@ -139,26 +141,26 @@ export const registerSchema = z.object({
   phone: text(30).optional(),
   skills: z.array(text(40)).max(10).default([]),
 });
-export const loginSchema = z.object({ email: z.string().trim().toLowerCase().email(), password: z.string().min(1).max(100) });
+export const loginSchema = z.object({ email: z.string().trim().toLowerCase().email().max(160), password: z.string().min(1).max(100) });
 
 export const userCreate = z.object({
   name: text(100, 2),
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8).max(100),
   role: z.enum(["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "RELIEF_ORGANIZATION", "VOLUNTEER", "SHELTER_MANAGER"]),
-  organizationId: z.string().nullable().optional(),
+  organizationId: id.nullable().optional(),
 });
 export const userUpdate = z.object({
   name: text(100, 2).optional(),
   role: z.enum(["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "RELIEF_ORGANIZATION", "VOLUNTEER", "SHELTER_MANAGER"]).optional(),
-  organizationId: z.string().nullable().optional(),
+  organizationId: id.nullable().optional(),
   active: z.boolean().optional(),
 });
 export const orgSchema = z.object({ name: text(120, 2), type: text(60), region: text(100), contact: text(160).optional(), active: z.boolean().optional() });
 export const profileUpdate = z.object({
   name: text(100, 2).optional(),
   phone: text(30).optional(),
-  currentPassword: z.string().optional(),
+  currentPassword: z.string().max(100).optional(),
   newPassword: z.string().min(8).max(100).optional(),
   availability: z.enum(["AVAILABLE", "DEPLOYED", "UNAVAILABLE"]).optional(),
   skills: z.array(text(40)).max(10).optional(),

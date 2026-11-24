@@ -16,7 +16,7 @@ export const GET = route({ roles: ["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "REL
 });
 
 export const POST = route({ roles: ["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "RELIEF_ORGANIZATION"] }, async ({ user, req }) => {
-  const { token } = await body(req, z.object({ token: z.string().min(8).transform((t) => t.replace(/^reliefgrid:/, "")) }));
+  const { token } = await body(req, z.object({ token: z.string().min(8).max(200).transform((t) => t.replace(/^reliefgrid:/, "")) }));
   const a = await db.allocation.findUnique({ where: { qrToken: token } });
   if (!a) throw notFound("Invalid token");
   return updateDistribution(user, a.id, { status: "DELIVERED", notes: "Verified by QR scan" });

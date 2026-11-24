@@ -56,5 +56,9 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "overrides": {
+    "effect": "^3.22.5",
+    "deepmerge-ts": "^8.0.2"
   }
 }

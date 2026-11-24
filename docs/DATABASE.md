@@ -23,6 +23,7 @@ erDiagram
         Role role
         Boolean active
         String organizationId FK
+        Int sessionVersion
     }
     Incident {
         String id PK
@@ -195,7 +196,7 @@ erDiagram
 | Table | Purpose | Notes |
 |---|---|---|
 | `Organization` | Relief organizations (NGOs, agencies). The unit of multi-organization isolation. | `name` unique; `active` lets an admin suspend an organization without deleting its history. |
-| `User` | Every account, with exactly one `role`. | `email` unique; `passwordHash` (bcrypt); `organizationId` binds relief-organization users (and optionally volunteers and shelter managers) to one organization; `active=false` blocks sign-in immediately. |
+| `User` | Every account, with exactly one `role`. | `email` unique; `passwordHash` (bcrypt); `organizationId` binds relief-organization users (and optionally volunteers and shelter managers) to one organization; `active=false` blocks sign-in immediately; `sessionVersion` is bumped on a password change, which invalidates every session signed with the old value. |
 | `Volunteer` | Volunteer profile (1:1 with a `VOLUNTEER` user). | `skills` (text array, defaults to empty), `availability`, home `latitude`/`longitude` (used for matching), optional `teamId`. |
 | `Team` | Group of volunteers, optionally deployed to an incident. | `incidentId` is the current deployment; `organizationId` is optional. |
 
@@ -235,7 +236,8 @@ erDiagram
 |---|---|---|
 | `Notification` | In-app notifications per user (title, body, link, read flag). | Created inside the same transaction as the event that triggers them. |
 | `ActivityLog` | Audit trail: who did what to which entity, with JSON details. | Written for every state change, including **rejected allocation attempts** and **priority changes**. It also drives the live-update stream (`/api/events`). |
-| `Upload` | Uploaded images (bytes, content type, size, uploader). | Served only to signed-in users through `/api/uploads/:id`. `CHECK` keeps size within 5 MB and equal to the stored byte length. |
+| `Upload` | Uploaded images (bytes, content type, size, uploader). | Served only to signed-in users through `/api/uploads/:id`. `CHECK` keeps size within 5 MB and equal to the stored byte length. The upload route caps each account at 25 MB and the table at 200 MB. |
+| `RateLimit` | Fixed-window request counters (`key`, `windowStart`, `count`). | One atomic upsert per check, shared by every serverless instance; rows older than a day are pruned. |
 
 ## Enumerations
 
@@ -300,6 +302,7 @@ Each index serves a known query pattern (34 in the initial migration):
 |---|---|
 | `20261121000000_init` | Full schema, CHECK constraints, distribution-record immutability trigger, indexes. |
 | `20261124000000_volunteer_skills_default` | `Volunteer.skills` defaults to an empty array, so admin-created volunteer accounts no longer fail. |
+| `20261125000000_security_hardening` | `User.sessionVersion` (session revocation) and the `RateLimit` table (shared rate limits). |
 | `20261124010000_uploads` | `Upload` table: images stored in Postgres, which works on read-only serverless file systems. |
 | `20261124020000_incident_user_fks` | Foreign keys for `Incident.coordinatorId` and `Incident.reportedById` that the initial migration missed (found with `prisma migrate diff`). |
 

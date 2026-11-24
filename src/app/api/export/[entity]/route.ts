@@ -1,6 +1,7 @@
 import { route } from "@/lib/api";
 import { db } from "@/lib/db";
 import { forbidden, notFound } from "@/lib/errors";
+import { orgIdOf } from "@/lib/scope";
 
 const MAX = 5000;
 /** Neutralise spreadsheet formula injection (=,+,-,@) and quote CSV fields. */
@@ -16,7 +17,7 @@ const toCsv = (rows: Record<string, unknown>[]) => {
 };
 
 export const GET = route<{ entity: string }>({ roles: ["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "RELIEF_ORGANIZATION"] }, async ({ user, params }) => {
-  const orgScope = user.role === "RELIEF_ORGANIZATION" ? user.organizationId! : undefined;
+  const orgScope = user.role === "RELIEF_ORGANIZATION" ? orgIdOf(user) : undefined;
   let rows: Record<string, unknown>[];
   switch (params.entity) {
     case "incidents":

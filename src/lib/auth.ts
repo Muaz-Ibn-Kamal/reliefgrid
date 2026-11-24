@@ -15,8 +15,9 @@ const key = () => {
 
 export { hashPassword, verifyPassword };
 
-export async function createSession(userId: string) {
-  const token = await new SignJWT({ sub: userId })
+/** Signs a 7-day session. `version` is the user's sessionVersion; bumping it (on password change) revokes older sessions. */
+export async function createSession(userId: string, version: number) {
+  const token = await new SignJWT({ sub: userId, ver: version })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -42,18 +43,21 @@ export type SessionUser = {
   organizationId: string | null;
 };
 
-/** Reads the cookie, verifies the JWT and re-loads the user so deactivation / role changes apply immediately. */
+/**
+ * Reads the cookie, verifies the JWT and re-loads the user so deactivation, role changes and password changes
+ * (via sessionVersion) apply immediately.
+ */
 export async function getUser(): Promise<SessionUser | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, key());
+    const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"] });
     const u = await db.user.findUnique({
       where: { id: String(payload.sub) },
-      select: { id: true, email: true, name: true, role: true, organizationId: true, active: true },
+      select: { id: true, email: true, name: true, role: true, organizationId: true, active: true, sessionVersion: true },
     });
-    if (!u || !u.active) return null;
-    const { active: _a, ...rest } = u;
+    if (!u || !u.active || Number(payload.ver ?? 0) !== u.sessionVersion) return null;
+    const { active: _a, sessionVersion: _v, ...rest } = u;
     return rest;
   } catch {
     return null;

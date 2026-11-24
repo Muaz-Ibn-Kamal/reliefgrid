@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (secrets stay local; .env.example is the committed template)
 .env*
 !.env.example
+!.env.test.example
 
 # vercel
 .vercel

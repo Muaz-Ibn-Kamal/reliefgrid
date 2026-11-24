@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { logActivity } from "./activity";
-import { conflict, forbidden, notFound } from "../errors";
+import { badRequest, conflict, forbidden, notFound } from "../errors";
 import type { SessionUserLike } from "./types";
 import type { z } from "zod";
 import type { occupancyUpdate, shelterUpdate } from "../validators";
@@ -42,6 +42,7 @@ export async function updateShelter(user: SessionUserLike, shelterId: string, in
     if (!s) throw notFound("Shelter not found");
     assertShelterAccess(user, s.managerId);
     if (input.managerId !== undefined && user.role !== "SYSTEM_ADMIN") throw forbidden("Only admins can reassign shelter managers");
+    if (input.managerId && !(await tx.user.findFirst({ where: { id: input.managerId, role: "SHELTER_MANAGER", active: true } }))) throw badRequest("managerId must be an active shelter manager");
     const cap = input.totalCapacity ?? s.totalCapacity;
     if (cap < s.occupancy) throw conflict(`Capacity cannot drop below current occupancy (${s.occupancy})`);
     let status = input.status ?? s.status;

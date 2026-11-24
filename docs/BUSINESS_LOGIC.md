@@ -42,7 +42,7 @@ Citizens can also submit help requests **without an account** at `/help`. That e
 | Organizations manage only their own resources | `GET /api/resources` forces `organizationId = user.organizationId` for relief-organization users. Stock changes call `adjustStock`, which rejects other organizations' resources. | `stock: org can adjust only own resources…`; E2E "Relief org cannot change another org's stock" |
 | New resources belong to the creator's organization | `POST /api/resources` ignores any `organizationId` a relief-organization user sends. | E2E "Relief org registers resource (bound to own org)" |
 | Organizations see and update only their own allocations | Allocation list filtered by organization; `updateDistribution` checks ownership. | `allocation: only coordinators/admins allocate; orgs only update their own distributions` |
-| Organizations edit only their own teams and cannot deploy teams | Checked in `PATCH /api/teams/:id`. | |
+| Organizations see and edit only their own teams, add only their own volunteers, and cannot deploy teams | `teamScope`, `createTeam` and `updateTeam` in `src/lib/services/team.ts`. | `security: relief orgs only see and staff their own teams` |
 | Shelter managers manage only their assigned shelters | `assertShelterAccess` in the shelter service. | `shelter: …` test |
 | Admins see everything; coordinators run cross-organization operations | Role checks above. | |
 | Inactive organizations' stock cannot be allocated | Checked inside the allocation transaction. | |

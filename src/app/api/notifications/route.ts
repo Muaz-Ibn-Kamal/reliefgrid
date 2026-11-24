@@ -10,7 +10,7 @@ export const GET = route({}, async ({ user }) => {
   return { items, unread };
 });
 export const PATCH = route({}, async ({ user, req }) => {
-  const { ids } = await body(req, z.object({ ids: z.array(z.string()).optional() }));
+  const { ids } = await body(req, z.object({ ids: z.array(z.string().max(64)).max(100).optional() }));
   await db.notification.updateMany({ where: { userId: user.id, read: false, ...(ids ? { id: { in: ids } } : {}) }, data: { read: true } });
   return { ok: true };
 });

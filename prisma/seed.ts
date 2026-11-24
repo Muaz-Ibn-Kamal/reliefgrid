@@ -92,7 +92,7 @@ const FACILITIES = ["Drinking Water", "Toilets", "Medical Corner", "Kitchen", "E
 async function main() {
   console.log("Resetting tables…");
   await db.$executeRawUnsafe(
-    `TRUNCATE "Upload","ActivityLog","Notification","FieldReport","Task","Volunteer","Team","ShelterOccupancyLog","Shelter","DistributionRecord","Allocation","StockMovement","Resource","EmergencyRequest","Incident","User","Organization" RESTART IDENTITY CASCADE`,
+    `TRUNCATE "RateLimit","Upload","ActivityLog","Notification","FieldReport","Task","Volunteer","Team","ShelterOccupancyLog","Shelter","DistributionRecord","Allocation","StockMovement","Resource","EmergencyRequest","Incident","User","Organization" RESTART IDENTITY CASCADE`,
   );
   const pw = await hashPassword(DEMO_PASSWORD);
 

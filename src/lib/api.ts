@@ -53,15 +53,40 @@ export function errorResponse(e: unknown) {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
+/** JSON bodies are small forms; anything larger is refused before it is buffered (uploads use multipart instead). */
+const MAX_JSON_BYTES = 256 * 1024;
+
 export async function body<T>(req: NextRequest, schema: ZodType<T>): Promise<T> {
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_JSON_BYTES) throw new ApiError(413, "Request body is too large");
+  let text = "";
+  if (req.body) {
+    const reader = req.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_JSON_BYTES) {
+        await reader.cancel();
+        throw new ApiError(413, "Request body is too large");
+      }
+      chunks.push(value);
+    }
+    text = Buffer.concat(chunks).toString("utf8");
+  }
   let json: unknown;
   try {
-    json = await req.json();
+    json = JSON.parse(text);
   } catch {
     throw badRequest("Request body must be valid JSON");
   }
   return schema.parse(json);
 }
+
+/** Client IP as set by the hosting proxy (Vercel overwrites X-Forwarded-For, so clients cannot spoof it there). */
+export const clientIp = (req: NextRequest) =>
+  req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
 
 export function page(sp: URLSearchParams) {
   const p = Math.max(1, Number(sp.get("page")) || 1);

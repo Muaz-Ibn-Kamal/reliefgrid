@@ -1,6 +1,7 @@
 import { route } from "@/lib/api";
 import { db } from "@/lib/db";
-import { badRequest } from "@/lib/errors";
+import { ApiError, badRequest } from "@/lib/errors";
+import { assertUploadAllowed } from "@/lib/services/upload";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 /** Allowed image types with their file signatures; the declared MIME type alone is never trusted. */
@@ -15,6 +16,10 @@ const TYPES: Record<string, { magic: number[]; at8?: number[] }> = {
  * hosts with read-only filesystems) and served only to signed-in users through GET /api/uploads/:id.
  */
 export const POST = route({ roles: ["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "RELIEF_ORGANIZATION", "VOLUNTEER", "SHELTER_MANAGER"] }, async ({ user, req }) => {
+  // Refuse oversized bodies before they are buffered (the multipart envelope adds a little over the file itself).
+  const declared = Number(req.headers.get("content-length"));
+  if (!declared) throw new ApiError(411, "Content-Length is required");
+  if (declared > MAX_BYTES + 64 * 1024) throw new ApiError(413, "Image must be 5 MB or smaller");
   const form = await req.formData().catch(() => { throw badRequest("Expected multipart/form-data"); });
   const file = form.get("file");
   if (!(file instanceof File)) throw badRequest("file is required");
@@ -25,6 +30,7 @@ export const POST = route({ roles: ["SYSTEM_ADMIN", "EMERGENCY_COORDINATOR", "RE
   const buf = Buffer.from(await file.arrayBuffer());
   const sigOk = t.magic.every((b, i) => buf[i] === b) && (!t.at8 || t.at8.every((b, i) => buf[8 + i] === b));
   if (!sigOk) throw badRequest("File content does not match its type");
+  await assertUploadAllowed(user.id, buf.length);
   const up = await db.upload.create({ data: { contentType: file.type, size: buf.length, data: buf, uploadedById: user.id }, select: { id: true } });
   return { url: `/api/uploads/${up.id}` };
 });

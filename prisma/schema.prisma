@@ -136,6 +136,8 @@ model User {
   role           Role
   active         Boolean  @default(true)
   organizationId String?
+  /// Bumped on password change; sessions signed with an older version are rejected.
+  sessionVersion Int      @default(0)
   createdAt      DateTime @default(now())
 
   organization         Organization?  @relation(fields: [organizationId], references: [id])
@@ -469,4 +471,13 @@ model Upload {
   createdAt    DateTime @default(now())
 
   uploadedBy User? @relation(fields: [uploadedById], references: [id])
+}
+
+/// Fixed-window request counters shared by every server instance (sign-in, registration, uploads, public requests, live streams).
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int
+
+  @@index([windowStart])
 }

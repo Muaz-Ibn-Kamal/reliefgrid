@@ -6,7 +6,7 @@ All endpoints are Next.js Route Handlers under [`src/app/api`](../src/app/api). 
 
 | Topic | Behavior |
 |---|---|
-| **Authentication** | `POST /api/auth/login` sets an `httpOnly` session cookie (`SameSite=Lax`, `Secure` in production, 7 days). Browsers send it automatically; scripts must keep a cookie jar. |
+| **Authentication** | `POST /api/auth/login` sets an `httpOnly` session cookie (`SameSite=Lax`, `Secure` in production, 7 days). Browsers send it automatically; scripts must keep a cookie jar. Changing the password signs out every other session. |
 | **Authorization** | Each endpoint has a role allow-list (table below) plus organization, ownership or assignment checks inside the services. |
 | **Not signed in** | `401 {"error": "Authentication required"}`. |
 | **Wrong role or scope** | `403 {"error": "…"}`. |
@@ -17,7 +17,9 @@ All endpoints are Next.js Route Handlers under [`src/app/api`](../src/app/api). 
 | **Unexpected errors** | `500 {"error": "Internal server error"}` (details are only logged on the server). |
 | **Pagination** | List endpoints take `page` (from 1) and `pageSize` (default 20, max 100) and return `{"data": [...], "meta": {"page", "pageSize", "total", "totalPages"}}`. |
 | **Sorting** | Incidents and requests default to priority (highest first); `sort=newest` (and `sort=affected` for incidents) are available. |
-| **Rate limits** | Login: 8 attempts per minute per IP and email. Public help requests: 5 per 10 minutes per IP. Exceeding either returns `429`. |
+| **Rate limits** | Stored in Postgres, so they hold across every server instance. Sign-in: 30 attempts per minute per network, and 8 per minute per network and email. Registration: 10 per hour per network. Public help requests: 5 per 10 minutes per network and 300 per hour platform-wide. Uploads: 20 per hour per account. Live-update streams: 60 connections per 10 minutes per account. Exceeding a limit returns `429`. |
+| **Body size** | JSON bodies over 256 KB return `413`. |
+| **Demo mode** | With `DEMO_MODE=true` (the public demo), the five shared demo accounts cannot change their password and admins cannot edit them: `403`. |
 
 Role abbreviations: **ADM** System Admin · **CRD** Emergency Coordinator · **ORG** Relief Organization · **VOL** Volunteer · **SHM** Shelter Manager · **any** any signed-in user · **public** no sign-in.
 
@@ -96,15 +98,15 @@ Role abbreviations: **ADM** System Admin · **CRD** Emergency Coordinator · **O
 | `PATCH /api/tasks/:id` | VOL (assignee) | `{status: "IN_PROGRESS" \| "COMPLETED", report?, photoUrl?}`. Completing requires a field report. Completed tasks are frozen (`409`). |
 | `DELETE /api/tasks/:id` | ADM, CRD | Cancels the task (its reports are kept). |
 | `POST /api/tasks/:id/reports` | VOL (assignee) | Field report `{content, photoUrl?}`. |
-| `GET /api/teams` | any | Teams with members, organization and deployment. Volunteers see only teams they belong to; shelter managers see none. |
-| `POST /api/teams` | ADM, CRD, ORG | `{name, organizationId?, memberIds?}` (relief organizations always create teams in their own organization). |
-| `PATCH /api/teams/:id` | ADM, CRD, ORG (own team) | `{name?, addMembers?, removeMembers?, deployToIncidentId? (ADM/CRD; null recalls the team)}`. |
+| `GET /api/teams` | any | Teams with members, organization and deployment. Relief organizations see only their own teams; volunteers only teams they belong to; shelter managers none. |
+| `POST /api/teams` | ADM, CRD, ORG | `{name, organizationId?, memberIds?}` (at most 100 members). Relief organizations always create teams in their own organization and may add only their own organization's volunteers (`403`); unknown volunteer ids return `400`. |
+| `PATCH /api/teams/:id` | ADM, CRD, ORG (own team) | `{name?, addMembers?, removeMembers?, deployToIncidentId? (ADM/CRD; null recalls the team)}`. The same membership rules as `POST` apply. |
 
 ### Uploads
 
 | Method & path | Roles | Description |
 |---|---|---|
-| `POST /api/upload` | any | `multipart/form-data` with `file` (JPEG, PNG or WebP; at most 5 MB; checked by content signature). Returns `{url: "/api/uploads/<id>"}`, to be passed as `imageUrl` or `photoUrl`. |
+| `POST /api/upload` | any | `multipart/form-data` with `file` (JPEG, PNG or WebP; at most 5 MB; checked by content signature). Each account may store 25 MB in total (`413`) and the platform 200 MB (`507`); `Content-Length` is required (`411`). Returns `{url: "/api/uploads/<id>"}`, to be passed as `imageUrl` or `photoUrl`. |
 | `GET /api/uploads/:id` | any | The image bytes (`Cache-Control: private`, `nosniff`, sandboxed). |
 
 ### Dashboard, reports, notifications, live updates

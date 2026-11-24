@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { db } from "../db";
 import { logActivity, notifyRoles } from "./activity";
 import { badRequest, conflict, forbidden, notFound } from "../errors";
@@ -41,7 +42,7 @@ export async function allocate(user: SessionUserLike, input: AllocInput) {
       if (!updated.length) throw conflict(`Insufficient stock: only ${res.quantity} ${res.unit} available`);
 
       const alloc = await tx.allocation.create({
-        data: { requestId: req.id, resourceId: res.id, organizationId: res.organizationId, quantity: input.quantity, allocatedById: user.id, notes: input.notes },
+        data: { requestId: req.id, resourceId: res.id, organizationId: res.organizationId, quantity: input.quantity, allocatedById: user.id, notes: input.notes, qrToken: randomBytes(18).toString("base64url") },
       });
       await tx.stockMovement.create({
         data: { resourceId: res.id, type: "ALLOCATE", delta: -input.quantity, balanceAfter: updated[0].quantity, reason: `Allocated to request ${req.id}`, allocationId: alloc.id, userId: user.id, toLocation: req.location },
