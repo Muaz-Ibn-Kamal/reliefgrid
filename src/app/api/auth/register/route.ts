@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { createSession, hashPassword } from "@/lib/auth";
 import { registerSchema } from "@/lib/validators";
-import { errorResponse, body } from "@/lib/api";
+import { assertSameOrigin, errorResponse, body } from "@/lib/api";
 import { rateLimit } from "@/lib/ratelimit";
 import { ApiError } from "@/lib/errors";
 import { logActivity } from "@/lib/services/activity";
@@ -10,6 +10,7 @@ import { logActivity } from "@/lib/services/activity";
 /** Public self-registration creates VOLUNTEER accounts only. Privileged roles are provisioned by a System Admin. */
 export async function POST(req: NextRequest) {
   try {
+    assertSameOrigin(req);
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
     if (!rateLimit(`register:${ip}`, 5, 60_000)) throw new ApiError(429, "Too many attempts. Try again in a minute.");
     const d = await body(req, registerSchema);

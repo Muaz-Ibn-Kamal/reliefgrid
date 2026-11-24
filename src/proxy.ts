@@ -14,4 +14,5 @@ export function proxy(req: NextRequest) {
   res.headers.set("Permissions-Policy", "geolocation=(self), camera=(), microphone=()");
   return res;
 }
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+// Static assets and the app icon skip the proxy, so the sign-in page can load its favicon before login.
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"] };

@@ -10,7 +10,7 @@ ReliefGrid helps emergency coordinators, relief organizations, volunteers and sh
 
 Built with **Next.js 16 (App Router) · React 19 · TypeScript · PostgreSQL · Prisma · Tailwind CSS · Recharts · Leaflet**.
 
-> **Live demo:** _deployment link coming soon_ · Demo logins for all five roles are listed [below](#demo-accounts).
+> **Live demo:** [reliefgrid-dun.vercel.app](https://reliefgrid-dun.vercel.app) · Demo logins for all five roles are listed [below](#demo-accounts).
 
 ![Emergency dashboard](docs/screenshots/dashboard.png)
 

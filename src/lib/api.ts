@@ -29,7 +29,8 @@ export function route<P = Record<string, string>>(
   };
 }
 
-function assertSameOrigin(req: NextRequest) {
+/** Rejects state-changing requests whose Origin header names another site (CSRF defence for cookie sessions). */
+export function assertSameOrigin(req: NextRequest) {
   const origin = req.headers.get("origin");
   if (!origin) return;
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");

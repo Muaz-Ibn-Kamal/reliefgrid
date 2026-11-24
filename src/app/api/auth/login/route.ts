@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { createSession, verifyPassword } from "@/lib/auth";
 import { loginSchema } from "@/lib/validators";
-import { errorResponse, body } from "@/lib/api";
+import { assertSameOrigin, errorResponse, body } from "@/lib/api";
 import { rateLimit } from "@/lib/ratelimit";
 import { logActivity } from "@/lib/services/activity";
 import { ApiError } from "@/lib/errors";
@@ -11,6 +11,7 @@ const DUMMY = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8.lZ9Y4xYb3o5oQe5pS9cG0jXq1Z6e"; //
 
 export async function POST(req: NextRequest) {
   try {
+    assertSameOrigin(req);
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
     const { email, password } = await body(req, loginSchema);
     if (!rateLimit(`login:${ip}:${email}`, 8, 60_000)) throw new ApiError(429, "Too many attempts. Try again in a minute.");
