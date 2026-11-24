@@ -1,7 +1,7 @@
 import { guardPage } from "@/lib/guard";
 import ResourcesClient from "./_client";
 
-export const metadata = { title: "Resources | ReliefGrid" };
+export const metadata = { title: "Resources" };
 
 export default async function Page() {
   await guardPage("/resources");
