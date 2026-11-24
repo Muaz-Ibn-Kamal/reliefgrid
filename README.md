@@ -2,7 +2,6 @@
 
 ReliefGrid helps emergency coordinators, relief organizations, volunteers and shelter managers work together during floods, cyclones, earthquakes, fires, landslides and infrastructure failures. Incidents and emergency requests are prioritized automatically; stock is allocated to verified needs **without ever overselling**; shelters can never be filled beyond capacity; and every action is audited and pushed live to everyone's screens.
 
-[![CI](https://github.com/Muaz-Ibn-Kamal/reliefgrid/actions/workflows/ci.yml/badge.svg)](https://github.com/Muaz-Ibn-Kamal/reliefgrid/actions/workflows/ci.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?logo=postgresql&logoColor=white)
@@ -130,7 +129,7 @@ docker run -d --name reliefgrid-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=
 
 ## Testing
 
-Every push runs typecheck, lint, the integration tests against PostgreSQL, a full seed and a production build in [GitHub Actions](.github/workflows/ci.yml).
+A [GitHub Actions workflow](.github/workflows/ci.yml) runs typecheck, lint, the integration tests against PostgreSQL, a full seed and a production build.
 
 **Integration tests (13).** These cover allocation limits and concurrency, rollback on failure, the immutable ledger, shelter capacity, priority scoring, duplicate detection and the verification workflow, volunteer task ownership, and organization scoping. They create their own fixtures, so they run against a separate database. They refuse to run against the seeded demo database.
 
