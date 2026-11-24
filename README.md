@@ -157,20 +157,33 @@ Last verified run:
 - real-time: a change reached another user's open page in 2.5 s
 - schema drift (`prisma migrate diff`): none
 
-## Deployment (Vercel + managed PostgreSQL)
+## Deployment (Vercel + Neon)
 
-1. **Create a database**, e.g. Neon from the Vercel Marketplace (Storage → Neon), Supabase or Railway.
-2. **Migrate and seed** once from your machine, using the database's direct (non-pooled) connection string:
+The live demo runs on Vercel with its functions in Singapore (`sin1`, set in [`vercel.json`](vercel.json)), next to a Neon Postgres database in the same region, provisioned through the Vercel Marketplace. The GitHub repository is connected: every push to `main` deploys to production, and other branches get preview deployments.
+
+To deploy your own copy with the [Vercel CLI](https://vercel.com/docs/cli):
+
+1. **Link the project and add a database.** The Neon integration injects `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct) into every environment:
    ```bash
-   DATABASE_URL="<direct connection string>" npm run db:migrate
-   DATABASE_URL="<direct connection string>" npm run db:seed
+   vercel link
+   vercel integration add neon --meta region=sin1
    ```
-3. **Import the GitHub repository in Vercel** and set the environment variables `DATABASE_URL` (the pooled string is fine at runtime) and `AUTH_SECRET` (32+ characters). The default build (`npm install` → `next build`) works as is.
-4. Deploy, then put the URL at the top of this README.
+2. **Add the session secret** (32+ characters) for production and preview:
+   ```bash
+   openssl rand -base64 32 | vercel env add AUTH_SECRET production --sensitive
+   openssl rand -base64 32 | vercel env add AUTH_SECRET preview --sensitive
+   ```
+3. **Migrate and seed** once, using the direct connection string:
+   ```bash
+   DATABASE_URL="<DATABASE_URL_UNPOOLED>" npm run db:migrate
+   DATABASE_URL="<DATABASE_URL_UNPOOLED>" npm run db:seed
+   ```
+4. **Deploy:** push to `main`, or run `vercel deploy --prod`. The default build (`prisma generate && next build`) needs no extra settings.
 
 Production notes:
-- The rate limiter is in-memory per instance; use Redis or Upstash when scaling out.
+- Live updates and polling pause while a tab is hidden or idle for 10 minutes and catch up on return, so a forgotten tab doesn't hold a function open or keep the database awake.
 - The SSE stream runs on the Node.js runtime and ends every 4 minutes; browsers reconnect automatically.
+- The rate limiter is in-memory per instance; use Redis or Upstash when scaling out.
 - Images are stored in Postgres; for large volumes, move them to object storage.
 
 ## Requirement coverage

@@ -1,5 +1,6 @@
 "use client";
 import useSWR, { type SWRConfiguration } from "swr";
+import { isActive } from "./presence";
 
 export class ApiErr extends Error {
   constructor(public status: number, message: string, public details?: unknown) { super(message); }
@@ -24,9 +25,12 @@ export async function api<T = unknown>(url: string, opts: { method?: string; jso
   return data as T;
 }
 
-/** SWR with a polling interval gives near-real-time status updates across users. */
+/**
+ * SWR with a polling interval gives near-real-time status updates across users. Polling and focus revalidation pause
+ * while the tab is hidden or idle (see presence.ts).
+ */
 export function useApi<T>(url: string | null, refreshMs = 0, cfg: SWRConfiguration = {}) {
-  return useSWR<T, ApiErr>(url, (u: string) => api<T>(u), { refreshInterval: refreshMs, keepPreviousData: true, revalidateOnFocus: true, ...cfg });
+  return useSWR<T, ApiErr>(url, (u: string) => api<T>(u), { refreshInterval: refreshMs, keepPreviousData: true, revalidateOnFocus: true, isVisible: isActive, ...cfg });
 }
 
 export type Paged<T> = { data: T[]; meta: { page: number; pageSize: number; total: number; totalPages: number } };

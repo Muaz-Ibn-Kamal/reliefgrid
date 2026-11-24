@@ -1,0 +1,10 @@
+# Keeps local-only files out of `vercel deploy` uploads. Git deployments only see tracked files.
+.env*
+!.env.example
+.pgdata
+.next
+node_modules
+src/generated
+coverage
+test-results
+playwright-report
