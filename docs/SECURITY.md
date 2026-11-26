@@ -25,7 +25,7 @@ Please don't open a public issue. Contact the maintainer (GitHub user Muaz-Ibn-K
 
 ### Scope and method
 
-- **Code:** all 36 API route handlers, the services, sessions, the proxy and the security headers. Also the dependencies and the full git history (6 commits) for secrets.
+- **Code:** all 40 API route files (57 handlers), the services, sessions, the proxy and the security headers. Also the dependencies and the full git history (6 commits) for secrets.
 - **Production** (https://reliefgrid-dun.vercel.app), passive checks only:
   - response headers and cookie flags;
   - unauthenticated access;
