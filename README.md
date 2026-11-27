@@ -117,6 +117,8 @@ docker run -d --name reliefgrid-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=
 # DATABASE_URL="postgresql://postgres:postgres@localhost:5432/reliefgrid"
 ```
 
+**Continue with Google (optional).** In Google Cloud Console, create an OAuth client of type *Web application* and add `http://localhost:3000/api/auth/google/callback` (and your deployed address plus `/api/auth/google/callback`) as authorized redirect URIs. Then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The Google button appears on the sign-in and register pages only when both are set. People who sign in with Google for the first time get a volunteer account; staff roles are still assigned by a System Admin.
+
 ### Scripts
 
 | Script | Purpose |
@@ -176,6 +178,7 @@ To deploy your own copy with the [Vercel CLI](https://vercel.com/docs/cli):
    openssl rand -base64 32 | vercel env add AUTH_SECRET preview --sensitive
    vercel env add DEMO_MODE production --value true --yes
    ```
+   Optional, for Google sign-in: add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` the same way (Sensitive), with the production address plus `/api/auth/google/callback` registered in Google Cloud Console.
 3. **Migrate and seed** once, using the direct connection string:
    ```bash
    DATABASE_URL="<DATABASE_URL_UNPOOLED>" npm run db:migrate

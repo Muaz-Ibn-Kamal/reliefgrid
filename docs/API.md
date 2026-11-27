@@ -31,6 +31,8 @@ Role abbreviations: **ADM** System Admin · **CRD** Emergency Coordinator · **O
 |---|---|---|
 | `POST /api/auth/login` | public | Body `{email, password}`. Sets the session cookie; returns `{user: {id, name, role}}`. Rate-limited. |
 | `POST /api/auth/register` | public | Self-registration as a **volunteer**: `{name, email, password (≥8), phone?, skills?: string[]}`. Other roles are created by an admin. |
+| `GET /api/auth/google` | public | Starts "Continue with Google": sets a short-lived signed `rg_oauth` cookie (state, nonce, PKCE verifier) and redirects to Google. Redirects to `/login?error=google_unavailable` when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are not set. |
+| `GET /api/auth/google/callback` | public | Google's return address. Checks the state, exchanges the code (with the PKCE verifier and client secret), verifies the ID token (signature, issuer, audience, nonce, verified email), then signs in the account with that email, or creates a **volunteer** account. Always redirects: to `/dashboard`, or to `/login?error=google_<reason>`. |
 | `POST /api/auth/logout` | any | Clears the session cookie. |
 | `GET /api/auth/me` | any | Current user with organization, plus the unread notification count: `{user: {id, name, email, role, organizationId, organization}, unread}`. |
 | `GET /api/profile` | any | Profile with organization, volunteer skills, availability and team. |
