@@ -1,9 +1,12 @@
-import { guardPage } from "@/lib/guard";
+import { Guarded } from "@/components/guarded";
 import ResourcesClient from "./_client";
 
 export const metadata = { title: "Resources" };
 
-export default async function Page() {
-  await guardPage("/resources");
-  return <ResourcesClient />;
+export default function Page() {
+  return (
+    <Guarded href="/resources">
+      <ResourcesClient />
+    </Guarded>
+  );
 }

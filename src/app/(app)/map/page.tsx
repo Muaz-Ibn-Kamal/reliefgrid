@@ -1,9 +1,12 @@
-import { guardPage } from "@/lib/guard";
+import { Guarded } from "@/components/guarded";
 import { MapClient } from "./_client";
 
 export const metadata = { title: "Map view" };
 
-export default async function Page() {
-  await guardPage("/map");
-  return <MapClient />;
+export default function Page() {
+  return (
+    <Guarded href="/map">
+      <MapClient />
+    </Guarded>
+  );
 }
